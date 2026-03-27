@@ -36,9 +36,7 @@ An advanced, production-ready Retrieval-Augmented Generation (RAG) system built 
 pip install google-genai python-dotenv faiss-cpu numpy pillow
 ```
 3. Set up your `.env` file at the root of the project:
-```env
-gemini_api_key=AIzaSyxxxxxxxxxxxxxxxxx
-```
+
 
 ## 🧠 How to Use
 

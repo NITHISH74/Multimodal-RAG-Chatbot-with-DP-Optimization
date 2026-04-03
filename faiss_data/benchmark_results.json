@@ -1,0 +1,16 @@
+{
+  "gemini_dim": 3072,
+  "cohere_dim": 1536,
+  "gemini_avg_latency": 643.7124800002493,
+  "cohere_avg_latency": 411.3304999998945,
+  "latency_winner": "Cohere",
+  "gemini_precision": 100.0,
+  "cohere_precision": 100.0,
+  "retrieval_winner": "TIE",
+  "gemini_images_embedded": 1,
+  "cohere_images_embedded": 1,
+  "total_images": 1,
+  "gemini_discrimination": 0.20415950221870505,
+  "cohere_discrimination": 0.33491495170287194,
+  "discrimination_winner": "Cohere"
+}

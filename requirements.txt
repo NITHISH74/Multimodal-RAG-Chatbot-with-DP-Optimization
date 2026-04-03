@@ -3,3 +3,8 @@ python-dotenv
 faiss-cpu
 numpy
 pillow
+cohere
+streamlit
+PyPDF2
+python-docx
+python-pptx

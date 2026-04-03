@@ -137,9 +137,8 @@ Both models correctly retrieved the matching document for all 5 test queries:
 ### 1. Clone & Create Virtual Environment
 ```bash
 cd LLM
-python -m venv .venv
-.venv\Scripts\activate     # Windows
-# source .venv/bin/activate  # macOS/Linux
+py -m venv .venv
+.venv\Scripts\activate     
 ```
 
 ### 2. Install Dependencies

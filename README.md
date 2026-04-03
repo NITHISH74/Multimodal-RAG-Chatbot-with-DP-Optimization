@@ -1,5 +1,7 @@
 # 🧠 Multi-Model RAG Chatbot (Stateless Cloud Architecture)
 
+**🔴 Live Demo (Deployed on Streamlit Cloud):** [https://multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app/](https://multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app/)
+
 An advanced, production-ready Retrieval-Augmented Generation (RAG) system built entirely for **serverless cloud deployment**. Features dual embedding support (Gemini & Cohere) and dynamic programming context optimization, driven entirely by a Supabase pgvector backend.
 
 > Built with **Gemini 2.5 Flash** (Generation) • **Gemini Embedding 2 / Cohere v4.0** (Embeddings) • **Supabase pgvector** (Vector DB & History) • **Streamlit** (Web UI)

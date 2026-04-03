@@ -25,7 +25,7 @@
       },
       {
         "role": "assistant",
-        "content": "The **Agentic Framework** is an approach or mindset that emphasizes the importance of **agency** – the capacity of individuals to act independently and make their own free choices. It's about taking proactive control over one's life, circumstances, and outcomes, rather than being passively shaped by external forces.\n\nIn essence, an agentic framework encourages individuals, teams, or organizations to:\n\n1.  **Recognize their power to choose:** Even in challenging situations, there's always a choice in how one interprets, responds to, and acts upon events.\n2.  **Take ownership and responsibility:** Instead of blaming external factors or falling into a \"victim mentality,\" it promotes taking responsibility for one's actions, reactions, and the consequences thereof.\n3.  **Be proactive, not reactive:** Anticipate challenges and opportunities, and initiate action rather than waiting for things to happen to them.\n4.  **Set intentions and pursue goals:** Clearly define what they want to achieve and actively work towards those goals with purpose and determination.\n5.  **Utilize resourcefulness:** Focus on finding solutions and making the most of available resources, rather than dwelling on limitations.\n\n**Key Principles of the Agentic Framework:**\n\n*   **Choice & Intentionality:** Understanding that you are always making choices, and striving for those choices to be deliberate and aligned with your goals.\n*   **Ownership & Accountability:** Accepting responsibility for your actions, results, and even your emotional responses.\n*   **Proactivity:** Initiating action, anticipating future needs, and shaping circumstances rather than just responding to them.\n*   **Self-Efficacy:** Believing in your own capacity to execute behaviors necessary to produce specific performance attainments.\n*   **Adaptability & Learning:** Seeing challenges as opportunities to learn and grow, and adapting strategies as needed.\n\n**Where is it Applied?**\n\nThe Agentic Framework can be applied in various contexts:\n\n*   **Personal Development:** Enhancing self-leadership, career advancement, personal well-being, and resilience.\n*   **Leadership:** Leaders adopting an agentic mindset empower their teams, foster innovation, and guide their organizations effectively through change.\n*   **Team Dynamics:** Teams that operate with an agentic mindset take collective responsibility, collaborate proactively, and overcome obstacles more effectively.\n*   **Organizational Culture:** Cultivating a culture where employees feel empowered to make decisions, take initiative, and contribute meaningfully.\n*   **Education:** Encouraging students to take an active role in their learning, set their own goals, and manage their educational journey.\n\n**Benefits of Adopting an Agentic Framework:**\n\n*   **Increased Empowerment:** Feeling more in control of one's life and destiny.\n*   **Enhanced Problem-Solving:** A proactive and resourceful approach leads to better solutions.\n*   **Greater Resilience:** The ability to bounce back from setbacks by focusing on what can be controlled.\n*   **Higher Achievement:** Clearer goals and proactive action lead to better results.\n*   **Improved Well-being:** Reduced stress and a greater sense of purpose and satisfaction.\n\nIn essence, the Agentic Framework is about moving from a \"things happen to me\" mentality to a \"I make things happen\" mentality, consciously shaping one's reality through intentional action and responsible choices.",
+        "content": "The **Agentic Framework** is an approach or mindset that emphasizes the importance of **agency** \u00e2\u20ac\u201c the capacity of individuals to act independently and make their own free choices. It's about taking proactive control over one's life, circumstances, and outcomes, rather than being passively shaped by external forces.\n\nIn essence, an agentic framework encourages individuals, teams, or organizations to:\n\n1.  **Recognize their power to choose:** Even in challenging situations, there's always a choice in how one interprets, responds to, and acts upon events.\n2.  **Take ownership and responsibility:** Instead of blaming external factors or falling into a \"victim mentality,\" it promotes taking responsibility for one's actions, reactions, and the consequences thereof.\n3.  **Be proactive, not reactive:** Anticipate challenges and opportunities, and initiate action rather than waiting for things to happen to them.\n4.  **Set intentions and pursue goals:** Clearly define what they want to achieve and actively work towards those goals with purpose and determination.\n5.  **Utilize resourcefulness:** Focus on finding solutions and making the most of available resources, rather than dwelling on limitations.\n\n**Key Principles of the Agentic Framework:**\n\n*   **Choice & Intentionality:** Understanding that you are always making choices, and striving for those choices to be deliberate and aligned with your goals.\n*   **Ownership & Accountability:** Accepting responsibility for your actions, results, and even your emotional responses.\n*   **Proactivity:** Initiating action, anticipating future needs, and shaping circumstances rather than just responding to them.\n*   **Self-Efficacy:** Believing in your own capacity to execute behaviors necessary to produce specific performance attainments.\n*   **Adaptability & Learning:** Seeing challenges as opportunities to learn and grow, and adapting strategies as needed.\n\n**Where is it Applied?**\n\nThe Agentic Framework can be applied in various contexts:\n\n*   **Personal Development:** Enhancing self-leadership, career advancement, personal well-being, and resilience.\n*   **Leadership:** Leaders adopting an agentic mindset empower their teams, foster innovation, and guide their organizations effectively through change.\n*   **Team Dynamics:** Teams that operate with an agentic mindset take collective responsibility, collaborate proactively, and overcome obstacles more effectively.\n*   **Organizational Culture:** Cultivating a culture where employees feel empowered to make decisions, take initiative, and contribute meaningfully.\n*   **Education:** Encouraging students to take an active role in their learning, set their own goals, and manage their educational journey.\n\n**Benefits of Adopting an Agentic Framework:**\n\n*   **Increased Empowerment:** Feeling more in control of one's life and destiny.\n*   **Enhanced Problem-Solving:** A proactive and resourceful approach leads to better solutions.\n*   **Greater Resilience:** The ability to bounce back from setbacks by focusing on what can be controlled.\n*   **Higher Achievement:** Clearer goals and proactive action lead to better results.\n*   **Improved Well-being:** Reduced stress and a greater sense of purpose and satisfaction.\n\nIn essence, the Agentic Framework is about moving from a \"things happen to me\" mentality to a \"I make things happen\" mentality, consciously shaping one's reality through intentional action and responsible choices.",
         "meta": {
           "retrieval_time": 0.0,
           "generation_time": 9.53329348564148,
@@ -72,5 +72,85 @@
     "total_input_tokens": 3172,
     "total_output_tokens": 2724,
     "total_queries": 4
+  },
+  {
+    "session_id": "20260403_130525",
+    "embedding_model": "Cohere",
+    "total_input_tokens": 3172,
+    "total_output_tokens": 2724,
+    "total_queries": 6,
+    "timestamp": "2026-04-03T13:05:56.710930",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is the agentic framework?"
+      },
+      {
+        "role": "assistant",
+        "content": "Generation error: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Your API key was reported as leaked. Please use another API key.', 'status': 'PERMISSION_DENIED'}}",
+        "meta": {
+          "retrieval_time": 0.6606464385986328,
+          "generation_time": 1.6480138301849365,
+          "context_chunks": 1,
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      {
+        "role": "user",
+        "content": "ModuleNotFoundError: No module named 'supabase'\n\nFile \"C:\\Users\\ADMIN\\Desktop\\LLM\\.venv\\Lib\\site-packages\\streamlit\\runtime\\scriptrunner\\exec_code.py\", line 129, in exec_func_with_error_handling\n    result = func()\n             ^^^^^^\nFile \"C:\\Users\\ADMIN\\Desktop\\LLM\\.venv\\Lib\\site-packages\\streamlit\\runtime\\scriptrunner\\script_runner.py\", line 689, in code_to_exec\n    exec(code, module.__dict__)  # noqa: S102\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFile \"C:\\Users\\ADMIN\\Desktop\\LLM\\app.py\", line 21, in <module>\n    from supabase import create_client, Client"
+      },
+      {
+        "role": "assistant",
+        "content": "Generation error: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Your API key was reported as leaked. Please use another API key.', 'status': 'PERMISSION_DENIED'}}",
+        "meta": {
+          "retrieval_time": 0.45314526557922363,
+          "generation_time": 0.8498129844665527,
+          "context_chunks": 2,
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      }
+    ]
+  },
+  {
+    "session_id": "20260403_132503",
+    "embedding_model": "Cohere",
+    "total_input_tokens": 2022,
+    "total_output_tokens": 1078,
+    "total_queries": 2,
+    "timestamp": "2026-04-03T13:25:34.511839",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is agentic Framework?"
+      },
+      {
+        "role": "assistant",
+        "content": "Based on the provided image, an **Agentic framework** is a system designed around a **Large Language Model (LLM)** that leverages multiple specialized \"agents\" to process user requests and accomplish tasks.\n\nHere are its key characteristics and components:\n\n1.  **Large Language Model (LLM):** It forms the core intelligence, often responsible for understanding, reasoning, and generating responses.\n2.  **Planning Agent:** This central component receives user input and orchestrates the overall process. It decides which agents to use and how to combine their efforts to fulfill the request.\n3.  **Specialized Agents:** The framework utilizes various individual agents (e.g., Agent 1, Agent 2, Agent 3, Decision Agent) that can perform specific tasks or operations.\n4.  **Workflows:** Tasks can be executed in different patterns:\n    *   **Sequential workflow:** Agents process information one after another in a predefined order.\n    *   **Parallel workflow:** Multiple agents work concurrently, with their outputs often fed into a \"Decision Agent\" to synthesize results or make choices.\n5.  **Memory:** The framework maintains a stateful memory, including:\n    *   **Chat history:** To remember past interactions.\n    *   **User profile:** To personalize experiences.\n    *   **Conversation state:** To maintain context within an ongoing dialogue.\n6.  **Guardrails:** These are mechanisms that ensure the system's output adheres to predefined safety, ethical, or operational guidelines before being presented to the user.\n7.  **Adaptation & Learning:** The framework is designed to learn and improve over time, with feedback from the system's output potentially influencing the \"Planning agent\" to refine its strategies.\n8.  **Observability & Analytics:** It includes tools and processes for monitoring the framework's performance, agent interactions, and overall system behavior.\n\nIn essence, an Agentic framework empowers an LLM by breaking down complex problems into manageable sub-tasks handled by specialized agents, allowing for more robust, dynamic, and context-aware interactions with users.",
+        "meta": {
+          "retrieval_time": 1.2241909503936768,
+          "generation_time": 8.042118310928345,
+          "context_chunks": 2,
+          "input_tokens": 1011,
+          "output_tokens": 434
+        }
+      },
+      {
+        "role": "user",
+        "content": "what is agentic Framework?"
+      },
+      {
+        "role": "assistant",
+        "content": "Based on the provided diagram, an **Agentic Framework** is a sophisticated system designed to leverage a **Large Language Model (LLM)** to process user inputs, perform complex tasks, and generate outputs, all while maintaining context and adhering to specified boundaries.\n\nHere's a breakdown of its key components and how they interact:\n\n1.  **User Input:** The process begins with a user interaction, providing a query or request to the system.\n2.  **Planning Agent:** This is the initial intelligent component that receives the user's input. Its role is to understand the intent and strategize how to fulfill the request. It decides whether the task requires a **sequential workflow** (a series of steps performed one after another by different agents) or a **parallel workflow** (multiple agents working concurrently, with a **decision agent** to synthesize or choose among their outputs).\n3.  **Large Language Model (LLM):** This is the foundational intelligence within the framework. It powers the planning agent, individual agents, and the decision agent, providing capabilities for understanding, reasoning, and generation.\n4.  **Agents:** These are specialized, modular components designed to perform specific tasks. The planning agent orchestrates their execution either in:\n    *   **Sequential Workflow:** Agents (e.g., Agent 1 -> Agent 2 -> Agent 3) process information and pass it along in a chain, each building upon the previous step.\n    *   **Parallel Workflow:** Multiple agents (e.g., Agent 1, Agent 2) work simultaneously on different aspects of the task, with a **Decision Agent** then integrating their findings or making a final choice.\n5.  **Memory:** The framework includes a memory module to maintain continuity and personalization. This stores:\n    *   **Chat history:** Previous interactions with the user.\n    *   **User profile:** Information about the user's preferences or background.\n    *   **Conversation state:** The current context and progress of an ongoing interaction. This memory informs the planning agent and other components.\n6.  **Guardrails:** Before any output is presented to the user, it passes through guardrails. These are critical safety and policy mechanisms that ensure the system's responses are appropriate, ethical, safe, and aligned with predefined rules.\n7.  **System Output:** The processed and vetted information or action is then presented back to the user.\n8.  **Adaptation & Learning:** The framework incorporates a feedback loop, allowing the system to learn from its performance and adapt over time. This continuous improvement mechanism enhances the planning agent's effectiveness and the overall system's capabilities.\n9.  **Observability & Analytics:** This component monitors the entire framework's operation, collecting data on performance, agent interactions, and user engagement, which is crucial for debugging, optimization, and understanding system behavior.\n\nIn essence, an Agentic Framework empowers an LLM by breaking down complex problems into manageable tasks for specialized agents, coordinating their execution, maintaining context through memory, ensuring safe and appropriate outputs via guardrails, and continuously improving through learning and observability.",
+        "meta": {
+          "retrieval_time": 0.9970424175262451,
+          "generation_time": 8.132905721664429,
+          "context_chunks": 2,
+          "input_tokens": 1011,
+          "output_tokens": 644
+        }
+      }
+    ]
   }
 ]

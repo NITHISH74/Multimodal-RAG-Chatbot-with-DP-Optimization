@@ -8,3 +8,5 @@ streamlit
 PyPDF2
 python-docx
 python-pptx
+supabase
+st-copy-to-clipboard

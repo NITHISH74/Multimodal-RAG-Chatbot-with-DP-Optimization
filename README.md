@@ -201,7 +201,3 @@ Runs 4 automated tests comparing Gemini vs Cohere across latency, retrieval, sem
 | **Document Parsing** | PyPDF2, python-docx, python-pptx, Pillow |
 
 ---
-
-## 📜 License
-
-This project is for educational and personal use.

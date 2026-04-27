@@ -1,0 +1,5 @@
+1. Reduce the RAG Latency.
+2. Improve the RAG data quality.
+3. Add the agent webcrawl to crawl the website and save in DB.
+4. want to check the vector DB or grph DB which is best.
+5. try to increase the input upload data size.

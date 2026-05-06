@@ -3,5 +3,5 @@
 3. Add the agent webcrawl to crawl the website and save in DB.
 4. want to check the vector DB or grph DB which is best.
 5. try to increase the input upload data size.
-6. Make this Multi model RAG as Agentic RAG system. (Check which RAG system better in production ready application)
+6. Make this Multi model RAG as Advance Agentic RAG system. (Check which RAG system better in production ready application)
 7. Try to add the TOON in this RAG to reduce the consumption of the Token usage.

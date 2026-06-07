@@ -30,9 +30,23 @@ def get_cohere_client():
 
 @st.cache_resource
 def get_supabase_client() -> Client:
+    """Privileged (service_role) client — used for all writes / storage.
+    Runs server-side only (Phase 15)."""
     url = os.getenv("project_url")
-    # Prefer a narrowly-scoped anon key if provided; fall back to service key.
     key = os.getenv("service_key")
+    if url and key:
+        return create_client(url, key)
+    return None
+
+
+@st.cache_resource
+def get_supabase_anon_client() -> Client:
+    """Least-privilege (anon) client for read paths. Returns None if no
+    anon key is configured, in which case callers fall back to the service
+    client (Phase 15). With RLS enabled (migration 0005) the anon key can
+    only READ."""
+    url = os.getenv("project_url")
+    key = os.getenv("anon_key")
     if url and key:
         return create_client(url, key)
     return None

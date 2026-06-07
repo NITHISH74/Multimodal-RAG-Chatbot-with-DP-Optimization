@@ -173,9 +173,20 @@ streamlit run app.py
 
 ---
 
-## 🗄️ Database Migrations
+## 🗄️ Database Setup
 
-Apply the migrations in [`db/migrations/`](db/migrations/) **in numeric order** via the Supabase **SQL Editor** (or `supabase db push`):
+**The database schema must be applied once before indexing/search will work.** Choose one:
+
+### Option A — One-click in-app setup (easiest)
+1. In Supabase → **Project Settings → Database → Connection string → Session pooler**, copy the URI
+   (`postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`) and put your DB password in it.
+   > Use the **Session pooler** URI — Streamlit Cloud is IPv4-only and Supabase's direct connection is IPv6-only.
+2. Add it as the **`supabase_db_url`** secret (Streamlit Cloud → Manage app → Secrets, or your `.env`).
+3. In the app sidebar → **🔧 Database → Initialize Database**. You should see **"Schema ready ✅"**. Done.
+
+### Option B — Manual SQL (no extra secret)
+Run [`db/migrations/RUN_THIS_IN_SUPABASE.sql`](db/migrations/RUN_THIS_IN_SUPABASE.sql) in the Supabase **SQL Editor** (one paste),
+or apply the individual migrations in [`db/migrations/`](db/migrations/) **in numeric order** (or `supabase db push`):
 
 | File | What it does |
 |------|--------------|

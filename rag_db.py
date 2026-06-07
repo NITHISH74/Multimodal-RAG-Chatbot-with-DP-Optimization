@@ -12,9 +12,15 @@ from clients import get_supabase_client, get_supabase_anon_client
 
 
 def _read_client():
-    """Least-privilege client for read paths: anon if configured, else the
-    service client (Phase 15). Writes always use get_supabase_client()."""
-    return get_supabase_anon_client() or get_supabase_client()
+    """Client for read paths. Uses the service client by default (the app is
+    server-side). Only routes through the anon key when explicitly opted in via
+    config.USE_ANON_READS — otherwise anon can silently return 0 rows when RLS /
+    grants aren't set up for it. Writes always use get_supabase_client()."""
+    if config.USE_ANON_READS:
+        anon = get_supabase_anon_client()
+        if anon is not None:
+            return anon
+    return get_supabase_client()
 
 
 # ──────────────────────────────────────────────────────────────────────

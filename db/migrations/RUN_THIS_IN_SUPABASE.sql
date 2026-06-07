@@ -131,6 +131,12 @@ insert into storage.buckets (id, name, public)
 values ('rag-images', 'rag-images', true)
 on conflict (id) do nothing;
 
+-- ── Tell PostgREST (the API layer supabase-py uses) to reload its schema
+--    cache, so the new functions/columns are visible immediately. Without
+--    this, RPC calls can return empty results for a minute or two after a
+--    direct-connection migration.
+notify pgrst, 'reload schema';
+
 -- ════════════════════════════════════════════════════════════════════
 --  Done. Re-run "Index Uploads" in the app — it will work now.
 --  (RLS from migration 0005 is optional; add it later for hardening.)

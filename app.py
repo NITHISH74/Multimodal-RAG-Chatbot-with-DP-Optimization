@@ -30,6 +30,7 @@ import context_builder
 import routing
 import conversation
 import crawl
+import migrate
 from clients import get_gemini_client, get_supabase_client
 from embeddings import embed_text, embed_image
 
@@ -81,6 +82,7 @@ def init_state():
         "total_queries": 0, "embedding_model": "Gemini",
         "current_session_id": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "summary": "", "owner_id": "", "dev_mode": config.DEV_MODE,
+        "threshold": config.SIMILARITY_THRESHOLD,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -97,6 +99,12 @@ SCHEMA_HELP = (
     "**`db/migrations/RUN_THIS_IN_SUPABASE.sql`** (or migrations 0000–0005 in order), "
     "then try again. This is a one-time database setup step."
 )
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def schema_is_ready():
+    """Cached check: is the V3 DB schema applied? (Cleared after Initialize.)"""
+    return migrate.schema_ready(get_supabase_client())
 
 
 def is_schema_error(exc):
@@ -219,9 +227,10 @@ def _load_image_from_url(url):
 
 
 def run_rag_pipeline(user_query, model_name):
+    threshold = float(st.session_state.threshold)
     meta = {"retrieval_time": 0.0, "generation_time": 0.0, "context_chunks": 0,
             "input_tokens": 0, "output_tokens": 0, "intent": "document",
-            "threshold": config.SIMILARITY_THRESHOLD, "scores": [], "fallback": False}
+            "threshold": threshold, "scores": [], "fallback": False}
     owner_id = st.session_state.owner_id or None
     # Exclude the just-appended current user message from the history block
     # (it is added explicitly as the Question below).
@@ -244,7 +253,7 @@ def run_rag_pipeline(user_query, model_name):
     filter_type = routing.intent_to_filter(intent)
     t0 = time.time()
     try:
-        rows = cached_retrieve(user_query, model_name, config.SIMILARITY_THRESHOLD, filter_type, owner_id)
+        rows = cached_retrieve(user_query, model_name, threshold, filter_type, owner_id)
     except Exception as e:
         st.warning(SCHEMA_HELP if is_schema_error(e) else f"Retrieval error: {e}")
         rows = []
@@ -344,8 +353,37 @@ with st.sidebar:
         "User ID (optional document isolation)", value=st.session_state.owner_id,
         help="Set a user id to keep your uploads private to you. Leave blank to share.")
 
+    st.session_state.threshold = st.slider(
+        "Similarity threshold", 0.0, 1.0, value=float(st.session_state.threshold), step=0.05,
+        help="Min similarity for a chunk to count. Cohere/Gemini scores run low — "
+             "lower this if you get too many 'not found' replies; raise it to be stricter.")
+
     st.caption(f"Model: {config.GEMINI_EMBED_MODEL if model_choice=='Gemini' else config.COHERE_EMBED_MODEL} · "
-               f"threshold {config.SIMILARITY_THRESHOLD}")
+               f"threshold {st.session_state.threshold:.2f}")
+
+    # ── Database setup ──────────────────────────────────────────────
+    st.markdown("<div class='sidebar-section'><h3>🔧 Database</h3></div>", unsafe_allow_html=True)
+    if config.SUPABASE_DB_URL:
+        if st.button("🔧 Initialize Database", use_container_width=True):
+            with st.spinner("Applying schema…"):
+                try:
+                    migrate.run_migrations()
+                    schema_is_ready.clear()
+                    cached_retrieve.clear()
+                    st.success("Schema ready ✅")
+                    time.sleep(1.0); st.rerun()
+                except Exception as e:
+                    st.error(f"Initialization failed: {e}\n\n"
+                             "Check that `supabase_db_url` is the **Session Pooler** "
+                             "URI (port 5432) with the correct password.")
+    else:
+        st.caption(
+            "To enable one-click setup, add a **`supabase_db_url`** secret — the "
+            "**Session Pooler** URI from Supabase → Project Settings → Database → "
+            "Connection string → *Session pooler* (looks like "
+            "`postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`). "
+            "Or run `db/migrations/RUN_THIS_IN_SUPABASE.sql` manually."
+        )
 
     # ── Upload (Phase 9) ────────────────────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>📁 Upload</h3></div>", unsafe_allow_html=True)
@@ -433,6 +471,13 @@ st.markdown("""
     <p>Hybrid retrieval • Rerank-Lite • Token-optimized context • Cited answers</p>
 </div>""", unsafe_allow_html=True)
 
+if not schema_is_ready():
+    st.error(
+        "🗄️ **Database not initialized.** Your Supabase schema is missing the V3 "
+        "tables/columns, so indexing and search won't work yet. Open the sidebar → "
+        "**🔧 Database → Initialize Database** (one-time setup)."
+    )
+
 st.markdown(f"""
 <div class="metric-row">
     <div class="metric-card"><p class="metric-value">{st.session_state.total_queries}</p><p class="metric-label">Queries</p></div>
@@ -460,7 +505,7 @@ def render_dev_panel(meta):
                    f"Similarity/rerank scores: {meta.get('scores')}")
 
 
-for msg in st.session_state.messages:
+for i, msg in enumerate(st.session_state.messages):
     if msg["role"] == "user":
         with st.chat_message("user", avatar="👤"):
             st.markdown(msg["content"])
@@ -474,7 +519,7 @@ for msg in st.session_state.messages:
                 cols[1].caption(f"⚡ {m.get('generation_time',0):.2f}s")
                 cols[2].caption(f"📎 {m.get('context_chunks',0)}")
                 with cols[3]:
-                    st_copy_to_clipboard(msg["content"])
+                    st_copy_to_clipboard(msg["content"], key=f"copy_hist_{i}")
                 render_dev_panel(m)
 
 if user_input := st.chat_input("Ask about your documents…"):
@@ -491,7 +536,7 @@ if user_input := st.chat_input("Ask about your documents…"):
         cols[1].caption(f"⚡ {meta['generation_time']:.2f}s")
         cols[2].caption(f"📎 {meta['context_chunks']}")
         with cols[3]:
-            st_copy_to_clipboard(response_text)
+            st_copy_to_clipboard(response_text, key=f"copy_live_{len(st.session_state.messages)}")
         render_dev_panel(meta)
 
     st.session_state.messages.append({"role": "assistant", "content": response_text, "meta": meta})

@@ -12,3 +12,4 @@ supabase
 st-copy-to-clipboard
 requests
 beautifulsoup4
+psycopg2-binary

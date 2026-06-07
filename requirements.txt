@@ -10,3 +10,5 @@ python-docx
 python-pptx
 supabase
 st-copy-to-clipboard
+requests
+beautifulsoup4

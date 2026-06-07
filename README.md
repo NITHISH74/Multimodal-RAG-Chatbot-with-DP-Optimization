@@ -54,10 +54,30 @@ gemini_api_key = YOUR_GEMINI_API_KEY
 cohere_api_key = YOUR_COHERE_API_KEY
 project_url = YOUR_SUPABASE_PROJECT_URL
 service_key = YOUR_SUPABASE_SERVICE_ROLE_KEY
+
+# Optional tuning (all have sensible defaults — see config.py)
+similarity_threshold = 0.70        # min cosine similarity for a chunk to count
+crawl_allowed_domains =            # comma-separated allowlist for the web-crawl feature
+supabase_image_bucket = rag-images # Supabase Storage bucket for uploaded images
+dev_mode = false                   # true => show per-query diagnostics panel
 ```
 
 ### 4. Initialize Your Supabase Database
-Go to your [Supabase Dashboard](https://supabase.com/dashboard) **SQL Editor** and run the following command to create your schema and vector search RPC functions:
+Apply the migrations in [`db/migrations/`](db/migrations/) **in numeric order** via the
+[Supabase Dashboard](https://supabase.com/dashboard) **SQL Editor** (or `supabase db push`):
+
+| File | What it does |
+|------|--------------|
+| `0000_baseline.sql` | Base tables + vector search RPCs |
+| `0001_phase1_hnsw.sql` | HNSW ANN indexes (Cohere direct, Gemini via `halfvec`) |
+| `0002_phase2_chunk_metadata.sql` | Per-chunk metadata columns, content-hash dedup, full-text `tsvector` |
+| `0003_phase3_threshold_and_hybrid.sql` | Threshold filtering + `keyword_search` for hybrid retrieval |
+| `0004_phase8_storage.sql` | `rag-images` Storage bucket + public-read policy |
+
+> Requires pgvector ≥ 0.7 (for `halfvec`) — Supabase ships 0.8+. Verify with
+> `select extversion from pg_extension where extname='vector';`
+
+<details><summary>Legacy single-table schema (superseded by the migrations above)</summary>
 
 ```sql
 create extension if not exists vector;
@@ -112,6 +132,7 @@ language sql stable as $$
   order by embedding_cohere <=> query_embedding limit match_count;
 $$;
 ```
+</details>
 
 ---
 

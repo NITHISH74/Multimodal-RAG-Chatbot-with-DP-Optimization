@@ -91,6 +91,22 @@ init_state()
 # ══════════════════════════════════════════════════════════════════════
 #  UPLOAD VALIDATION (Phase 9 / 15)
 # ══════════════════════════════════════════════════════════════════════
+SCHEMA_HELP = (
+    "🗄️ **Database not migrated yet.** Your Supabase `documents` table is missing "
+    "the V3 columns (e.g. `content_hash`). Open **Supabase → SQL Editor** and run "
+    "**`db/migrations/RUN_THIS_IN_SUPABASE.sql`** (or migrations 0000–0005 in order), "
+    "then try again. This is a one-time database setup step."
+)
+
+
+def is_schema_error(exc):
+    """Detect the 'column/function/relation does not exist' class of errors
+    that mean the DB migrations haven't been applied yet."""
+    msg = str(getattr(exc, "message", "") or exc).lower()
+    return ("does not exist" in msg or "42703" in msg or "42p01" in msg
+            or "pgrst" in msg or "schema cache" in msg or "could not find" in msg)
+
+
 def validate_upload(uploaded_file):
     """Return (ok, error_message). Enforces extension + size limits."""
     name = uploaded_file.name.lower()
@@ -230,7 +246,7 @@ def run_rag_pipeline(user_query, model_name):
     try:
         rows = cached_retrieve(user_query, model_name, config.SIMILARITY_THRESHOLD, filter_type, owner_id)
     except Exception as e:
-        st.warning(f"Retrieval error: {e}")
+        st.warning(SCHEMA_HELP if is_schema_error(e) else f"Retrieval error: {e}")
         rows = []
     meta["retrieval_time"] = time.time() - t0
     meta["scores"] = [round(r.get("rerank_score", r.get("similarity", 0)), 3) for r in rows]
@@ -338,13 +354,19 @@ with st.sidebar:
     if st.button("📥 Index Uploads", use_container_width=True) and files:
         prog = st.progress(0, "Starting…")
         status = st.empty()
-        count, rejected = index_uploaded_files(files, st.session_state.embedding_model, prog, status)
-        if count > 0:
-            cached_retrieve.clear()
-            st.success(f"Indexed {count} chunk(s) using {st.session_state.embedding_model}!")
-        if rejected:
-            st.error("Some files were rejected:\n\n" + "\n\n".join(rejected))
-        time.sleep(1.5); st.rerun()
+        try:
+            count, rejected = index_uploaded_files(files, st.session_state.embedding_model, prog, status)
+            if count > 0:
+                cached_retrieve.clear()
+                st.success(f"Indexed {count} chunk(s) using {st.session_state.embedding_model}!")
+            if rejected:
+                st.error("Some files were rejected:\n\n" + "\n\n".join(rejected))
+            time.sleep(1.5); st.rerun()
+        except Exception as e:
+            if is_schema_error(e):
+                st.error(SCHEMA_HELP)
+            else:
+                st.error(f"Indexing failed: {e}")
 
     # ── Web crawl (Phase 10) ────────────────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>🌐 Web Crawl</h3></div>", unsafe_allow_html=True)
@@ -370,7 +392,7 @@ with st.sidebar:
             except crawl.CrawlError as e:
                 st.error(f"Crawl blocked: {e}")
             except Exception as e:
-                st.error(f"Crawl failed: {e}")
+                st.error(SCHEMA_HELP if is_schema_error(e) else f"Crawl failed: {e}")
 
     # ── History ─────────────────────────────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>🕐 History</h3></div>", unsafe_allow_html=True)

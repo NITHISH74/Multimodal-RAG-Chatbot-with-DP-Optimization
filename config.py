@@ -77,6 +77,9 @@ SUPABASE_IMAGE_BUCKET = _get("supabase_image_bucket", "rag-images")
 CRAWL_ALLOWED_DOMAINS = tuple(
     d.strip().lower() for d in _get("crawl_allowed_domains", "").split(",") if d.strip()
 )
+# Escape hatch: set crawl_allow_all=true to permit ANY domain (robots.txt is
+# still respected). Use with care — disables the domain allowlist safeguard.
+CRAWL_ALLOW_ALL = _bool("crawl_allow_all", False)
 CRAWL_TIMEOUT = _int("crawl_timeout", 15)
 CRAWL_USER_AGENT = _get("crawl_user_agent", "MultiModalRAGBot/1.0 (+manual-crawl)")
 CRAWL_MAX_BYTES = _int("crawl_max_bytes", 5_000_000)

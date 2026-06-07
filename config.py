@@ -46,7 +46,11 @@ COHERE_DIM = 1536
 # ── Retrieval / performance (Phase 1, 3, 4, 5) ───────────────────────
 RETRIEVAL_MATCH_COUNT = _int("retrieval_match_count", 10)      # candidates from vector search
 KEYWORD_MATCH_COUNT = _int("keyword_match_count", 10)          # candidates from full-text search
-SIMILARITY_THRESHOLD = _float("similarity_threshold", 0.70)    # Phase 3 default
+# Min cosine similarity for a chunk to count. NOTE: Cohere embed-v4 / Gemini
+# embeddings produce LOW cosine values — measured relevant chunks score ~0.15-0.35
+# (verified: self-similarity is 1.0, but query↔doc relevance lands low). 0.70
+# filters out everything. 0.15 is a practical default; tune via the sidebar slider.
+SIMILARITY_THRESHOLD = _float("similarity_threshold", 0.15)
 QUERY_CACHE_TTL = _int("query_cache_ttl", 600)                 # seconds
 EMBED_MAX_WORKERS = _int("embed_max_workers", 5)
 RERANK_TOP_K = _int("rerank_top_k", 6)                         # 5-7 chunks to the LLM (Phase 5)
@@ -76,6 +80,12 @@ SUPABASE_IMAGE_BUCKET = _get("supabase_image_bucket", "rag-images")
 #   postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 # Sensitive — keep in secrets only, never log it.
 SUPABASE_DB_URL = _get("supabase_db_url", "")
+
+# Opt-in: route read queries through the anon key (least-privilege). Only enable
+# AFTER applying RLS read policies (migration 0005) and granting anon SELECT —
+# otherwise anon returns 0 rows and search silently breaks. Off by default so the
+# server-side service client handles reads.
+USE_ANON_READS = _bool("use_anon_reads", False)
 
 # ── Web crawl (Phase 10) ─────────────────────────────────────────────
 # Comma-separated allowlist of domains permitted for manual crawling.

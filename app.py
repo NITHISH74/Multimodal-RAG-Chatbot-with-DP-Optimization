@@ -82,6 +82,7 @@ def init_state():
         "total_queries": 0, "embedding_model": "Gemini",
         "current_session_id": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "summary": "", "owner_id": "", "dev_mode": config.DEV_MODE,
+        "threshold": config.SIMILARITY_THRESHOLD,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -226,9 +227,10 @@ def _load_image_from_url(url):
 
 
 def run_rag_pipeline(user_query, model_name):
+    threshold = float(st.session_state.threshold)
     meta = {"retrieval_time": 0.0, "generation_time": 0.0, "context_chunks": 0,
             "input_tokens": 0, "output_tokens": 0, "intent": "document",
-            "threshold": config.SIMILARITY_THRESHOLD, "scores": [], "fallback": False}
+            "threshold": threshold, "scores": [], "fallback": False}
     owner_id = st.session_state.owner_id or None
     # Exclude the just-appended current user message from the history block
     # (it is added explicitly as the Question below).
@@ -251,7 +253,7 @@ def run_rag_pipeline(user_query, model_name):
     filter_type = routing.intent_to_filter(intent)
     t0 = time.time()
     try:
-        rows = cached_retrieve(user_query, model_name, config.SIMILARITY_THRESHOLD, filter_type, owner_id)
+        rows = cached_retrieve(user_query, model_name, threshold, filter_type, owner_id)
     except Exception as e:
         st.warning(SCHEMA_HELP if is_schema_error(e) else f"Retrieval error: {e}")
         rows = []
@@ -351,8 +353,13 @@ with st.sidebar:
         "User ID (optional document isolation)", value=st.session_state.owner_id,
         help="Set a user id to keep your uploads private to you. Leave blank to share.")
 
+    st.session_state.threshold = st.slider(
+        "Similarity threshold", 0.0, 1.0, value=float(st.session_state.threshold), step=0.05,
+        help="Min similarity for a chunk to count. Cohere/Gemini scores run low — "
+             "lower this if you get too many 'not found' replies; raise it to be stricter.")
+
     st.caption(f"Model: {config.GEMINI_EMBED_MODEL if model_choice=='Gemini' else config.COHERE_EMBED_MODEL} · "
-               f"threshold {config.SIMILARITY_THRESHOLD}")
+               f"threshold {st.session_state.threshold:.2f}")
 
     # ── Database setup ──────────────────────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>🔧 Database</h3></div>", unsafe_allow_html=True)
@@ -498,7 +505,7 @@ def render_dev_panel(meta):
                    f"Similarity/rerank scores: {meta.get('scores')}")
 
 
-for msg in st.session_state.messages:
+for i, msg in enumerate(st.session_state.messages):
     if msg["role"] == "user":
         with st.chat_message("user", avatar="👤"):
             st.markdown(msg["content"])
@@ -512,7 +519,7 @@ for msg in st.session_state.messages:
                 cols[1].caption(f"⚡ {m.get('generation_time',0):.2f}s")
                 cols[2].caption(f"📎 {m.get('context_chunks',0)}")
                 with cols[3]:
-                    st_copy_to_clipboard(msg["content"])
+                    st_copy_to_clipboard(msg["content"], key=f"copy_hist_{i}")
                 render_dev_panel(m)
 
 if user_input := st.chat_input("Ask about your documents…"):
@@ -529,7 +536,7 @@ if user_input := st.chat_input("Ask about your documents…"):
         cols[1].caption(f"⚡ {meta['generation_time']:.2f}s")
         cols[2].caption(f"📎 {meta['context_chunks']}")
         with cols[3]:
-            st_copy_to_clipboard(response_text)
+            st_copy_to_clipboard(response_text, key=f"copy_live_{len(st.session_state.messages)}")
         render_dev_panel(meta)
 
     st.session_state.messages.append({"role": "assistant", "content": response_text, "meta": meta})

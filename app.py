@@ -32,7 +32,7 @@ import conversation
 import crawl
 import migrate
 from clients import get_gemini_client, get_supabase_client
-from embeddings import embed_text, embed_image
+from embeddings import embed_text_all, embed_image_all
 
 load_dotenv()
 DATA_DIR = "data"
@@ -130,16 +130,19 @@ def validate_upload(uploaded_file):
 # ══════════════════════════════════════════════════════════════════════
 #  INDEXING (Phase 2 chunking, Phase 8 storage, Phase 9 staged status)
 # ══════════════════════════════════════════════════════════════════════
-def _embed_task(item, model_name):
-    """Thread worker: embed one chunk (text) or image. Returns (item, vector, err)."""
+def _embed_task(item):
+    """Thread worker: embed one chunk (text) or image under ALL index models.
+    Returns (item, {model: vector}, err)."""
     try:
         if item["kind"] == "image":
-            vec = embed_image(item["pil"], model_name)
+            vecs = embed_image_all(item["pil"])
         else:
-            vec = embed_text(item["chunk"]["content"], model_name)
-        return item, vec, None
+            vecs = embed_text_all(item["chunk"]["content"])
+        if not vecs:
+            return item, {}, "no embedding model available (check API keys)"
+        return item, vecs, None
     except Exception as e:
-        return item, None, str(e)
+        return item, {}, str(e)
 
 
 def index_uploaded_files(uploaded_files, model_name, progress_bar, status_text):
@@ -182,7 +185,7 @@ def index_uploaded_files(uploaded_files, model_name, progress_bar, status_text):
     progress_bar.progress(0.05, text=f"Embedding {len(tasks)} chunk(s)…")
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=config.EMBED_MAX_WORKERS) as ex:
-        futures = [ex.submit(_embed_task, t, model_name) for t in tasks]
+        futures = [ex.submit(_embed_task, t) for t in tasks]
         done = 0
         for fut in concurrent.futures.as_completed(futures):
             done += 1
@@ -191,13 +194,13 @@ def index_uploaded_files(uploaded_files, model_name, progress_bar, status_text):
 
     # ── Stage 3: upsert with dedup (embedding -> completed) ─────────
     files_done, inserted = set(), 0
-    for item, vec, err in results:
-        if err or not vec:
+    for item, vecs, err in results:
+        if err or not vecs:
             status_text.markdown(f"⚠️ `{item['file']}` chunk failed: {err or 'no vector'}")
             continue
         image_path = item.get("image_url") if item["kind"] == "image" else None
-        outcome = rag_db.upsert_chunk(item["chunk"], vec, model_name,
-                                      image_path=image_path, owner_id=owner_id)
+        outcome = rag_db.upsert_chunk_multi(item["chunk"], vecs,
+                                            image_path=image_path, owner_id=owner_id)
         if outcome in ("inserted", "updated"):
             inserted += 1
         files_done.add(item["file"])
@@ -422,8 +425,8 @@ with st.sidebar:
                 owner = st.session_state.owner_id or None
                 n = 0
                 for ch in web_chunks:
-                    vec = embed_text(ch["content"], st.session_state.embedding_model)
-                    if rag_db.upsert_chunk(ch, vec, st.session_state.embedding_model, owner_id=owner) in ("inserted", "updated"):
+                    vecs = embed_text_all(ch["content"])
+                    if rag_db.upsert_chunk_multi(ch, vecs, owner_id=owner) in ("inserted", "updated"):
                         n += 1
                 cached_retrieve.clear()
                 st.success(f"Crawled '{title or crawl_url}' → indexed {n} chunk(s).")

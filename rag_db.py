@@ -76,6 +76,63 @@ def upsert_chunk(chunk, vector, model_name, image_path=None, owner_id=None):
     return "inserted"
 
 
+_EMBED_COL = {"Gemini": "embedding_gemini", "Cohere": "embedding_cohere"}
+
+
+def upsert_chunk_multi(chunk, vectors_by_model, image_path=None, owner_id=None):
+    """Insert/update a chunk, storing embeddings for ALL provided models in a
+    single row. Querying under any of those models then finds the chunk —
+    removing the "switched embedding model => 0 results" trap.
+
+    vectors_by_model: {"Gemini": vec, "Cohere": vec} (any non-empty subset).
+    On an existing row (same content hash) only the embedding columns that are
+    still empty get filled. Returns ("inserted"|"updated"|"skipped").
+    """
+    vectors = {m: v for m, v in (vectors_by_model or {}).items() if v is not None}
+    if not vectors:
+        return "skipped"
+    sb = get_supabase_client()
+
+    existing_id = chunk_hash_exists(chunk["content_hash"])
+    if existing_id is not None:
+        row = sb.table("documents").select(
+            "embedding_gemini,embedding_cohere").eq("id", existing_id).limit(1).execute()
+        have = row.data[0] if row.data else {}
+        update = {}
+        for m, vec in vectors.items():
+            col = _EMBED_COL[m]
+            if have.get(col) is None:
+                update[col] = vec
+        if image_path:
+            update["image_path"] = image_path
+        if not update:
+            return "skipped"
+        sb.table("documents").update(update).eq("id", existing_id).execute()
+        return "updated"
+
+    record = {
+        "content": chunk["content"] or "Visual content",
+        "file_name": chunk["file_name"],
+        "document_type": chunk["document_type"],
+        "page_number": chunk.get("page_number"),
+        "chunk_index": chunk.get("chunk_index", 0),
+        "content_hash": chunk["content_hash"],
+        "source_url": chunk.get("source_url"),
+        "image_path": image_path,
+        "owner_id": owner_id,
+        "metadata": {
+            "file": chunk["file_name"],
+            "type": chunk["type"],
+            "page_number": chunk.get("page_number"),
+            "chunk_index": chunk.get("chunk_index", 0),
+        },
+    }
+    for m, vec in vectors.items():
+        record[_EMBED_COL[m]] = vec
+    sb.table("documents").insert(record).execute()
+    return "inserted"
+
+
 def file_already_indexed(file_name, model_name, owner_id=None):
     """True if any chunk of this file already has this model's embedding."""
     sb = get_supabase_client()

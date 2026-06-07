@@ -39,6 +39,41 @@ def embed_image(pil_image, model_name):
     return list(res.embeddings.float_[0])
 
 
+# Models we populate at index time so retrieval works no matter which model
+# the user later queries with (avoids the silent "0 chunks after switching
+# models" trap — the crawled/uploaded row carries BOTH embeddings).
+INDEX_MODELS = ("Gemini", "Cohere")
+
+
+def embed_text_all(text):
+    """Embed a text chunk under every index model. Returns {model: vector}.
+
+    A model that errors (e.g. its API key isn't configured) is skipped, so
+    indexing still succeeds with whatever model(s) are available.
+    """
+    out = {}
+    for m in INDEX_MODELS:
+        try:
+            out[m] = embed_text(text, m)
+        except Exception:
+            pass
+    return out
+
+
+def embed_image_all(pil_image):
+    """Embed an image under every index model. Returns {model: vector}.
+
+    Same fail-soft behaviour as embed_text_all.
+    """
+    out = {}
+    for m in INDEX_MODELS:
+        try:
+            out[m] = embed_image(pil_image, m)
+        except Exception:
+            pass
+    return out
+
+
 def embed_query(query_text, model_name):
     """Embed a user query for retrieval."""
     if model_name == "Gemini":

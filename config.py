@@ -71,6 +71,12 @@ ALLOWED_EXTS = ALLOWED_DOC_EXTS + ALLOWED_IMG_EXTS
 # ── Image storage (Phase 8) ──────────────────────────────────────────
 SUPABASE_IMAGE_BUCKET = _get("supabase_image_bucket", "rag-images")
 
+# ── DB bootstrap (in-app "Initialize Database" button) ───────────────
+# Supabase Session Pooler connection URI (IPv4-compatible, supports DDL):
+#   postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+# Sensitive — keep in secrets only, never log it.
+SUPABASE_DB_URL = _get("supabase_db_url", "")
+
 # ── Web crawl (Phase 10) ─────────────────────────────────────────────
 # Comma-separated allowlist of domains permitted for manual crawling.
 # Empty list => nothing allowed until the user configures it.

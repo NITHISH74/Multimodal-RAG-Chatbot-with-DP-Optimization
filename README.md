@@ -55,6 +55,9 @@ cohere_api_key = YOUR_COHERE_API_KEY
 project_url = YOUR_SUPABASE_PROJECT_URL
 service_key = YOUR_SUPABASE_SERVICE_ROLE_KEY
 
+# Optional: least-privilege read client (Phase 15). With RLS it can only READ.
+anon_key = YOUR_SUPABASE_ANON_KEY
+
 # Optional tuning (all have sensible defaults — see config.py)
 similarity_threshold = 0.70        # min cosine similarity for a chunk to count
 crawl_allowed_domains =            # comma-separated allowlist for the web-crawl feature
@@ -73,6 +76,7 @@ Apply the migrations in [`db/migrations/`](db/migrations/) **in numeric order** 
 | `0002_phase2_chunk_metadata.sql` | Per-chunk metadata columns, content-hash dedup, full-text `tsvector` |
 | `0003_phase3_threshold_and_hybrid.sql` | Threshold filtering + `keyword_search` for hybrid retrieval |
 | `0004_phase8_storage.sql` | `rag-images` Storage bucket + public-read policy |
+| `0005_phase15_rls.sql` | Row-Level Security: anon key is read-only (see [SECURITY.md](SECURITY.md)) |
 
 > Requires pgvector ≥ 0.7 (for `halfvec`) — Supabase ships 0.8+. Verify with
 > `select extversion from pg_extension where extname='vector';`

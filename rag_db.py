@@ -8,7 +8,13 @@ import io
 import uuid
 
 import config
-from clients import get_supabase_client
+from clients import get_supabase_client, get_supabase_anon_client
+
+
+def _read_client():
+    """Least-privilege client for read paths: anon if configured, else the
+    service client (Phase 15). Writes always use get_supabase_client()."""
+    return get_supabase_anon_client() or get_supabase_client()
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -99,7 +105,7 @@ def upload_image(file_bytes, file_name, content_type="image/png"):
 # ──────────────────────────────────────────────────────────────────────
 def vector_search(query_vec, model_name, threshold, match_count,
                   filter_type=None, owner_id=None):
-    sb = get_supabase_client()
+    sb = _read_client()
     rpc = "match_documents_gemini" if model_name == "Gemini" else "match_documents_cohere"
     res = sb.rpc(rpc, {
         "query_embedding": query_vec,
@@ -112,7 +118,7 @@ def vector_search(query_vec, model_name, threshold, match_count,
 
 
 def keyword_search(query_text, match_count, filter_type=None, owner_id=None):
-    sb = get_supabase_client()
+    sb = _read_client()
     res = sb.rpc("keyword_search", {
         "query_text": query_text,
         "match_count": match_count,
@@ -148,7 +154,7 @@ def save_messages(session_id, messages):
 
 
 def load_sessions(limit=20):
-    sb = get_supabase_client()
+    sb = _read_client()
     sessions = sb.table("chat_sessions").select("*").order(
         "created_at", desc=True).limit(limit).execute().data
     for s in sessions:

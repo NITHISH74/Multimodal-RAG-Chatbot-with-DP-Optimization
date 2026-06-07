@@ -52,7 +52,6 @@ DOC_CHUNKS = []
 
 def load_document_chunks():
     """Split demo.txt into logical sections for retrieval quality testing."""
-    global DOC_CHUNKS
     filepath = os.path.join(DATA_DIR, "demo.txt")
     if not os.path.exists(filepath):
         print("[ERROR] demo.txt not found in data/ folder.")

@@ -349,8 +349,11 @@ with st.sidebar:
     # ── Web crawl (Phase 10) ────────────────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>🌐 Web Crawl</h3></div>", unsafe_allow_html=True)
     crawl_url = st.text_input("Single URL to crawl", placeholder="https://example.com/page")
-    allowed = ", ".join(config.CRAWL_ALLOWED_DOMAINS) or "(none — set crawl_allowed_domains)"
-    st.caption(f"Allowed domains: {allowed}")
+    if config.CRAWL_ALLOW_ALL:
+        st.caption("Allowed domains: **any** (crawl_allow_all is on; robots.txt still respected)")
+    else:
+        allowed = ", ".join(config.CRAWL_ALLOWED_DOMAINS) or "**none yet** — set `crawl_allowed_domains` or `crawl_allow_all=true`"
+        st.caption(f"Allowed domains: {allowed}")
     if st.button("🕸️ Crawl & Index", use_container_width=True) and crawl_url:
         with st.spinner("Crawling…"):
             try:

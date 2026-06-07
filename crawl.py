@@ -59,7 +59,15 @@ def clean_html(html):
         tag.decompose()
     # Drop obvious ad / nav containers by class/id hints.
     for el in soup.find_all(attrs={"class": True}):
-        cls = " ".join(el.get("class", [])).lower()
+        # Skip nodes already removed as part of a parent's decompose() — their
+        # .attrs is None, and calling .get() on them raises (real-world HTML
+        # often nests matching containers, e.g. <div class="banner"><span class="ad">).
+        if el.attrs is None:
+            continue
+        classes = el.get("class") or []
+        if isinstance(classes, str):
+            classes = classes.split()
+        cls = " ".join(classes).lower()
         if any(h in cls for h in ("advert", "ad-", "-ad", "cookie", "banner",
                                   "sidebar", "menu", "navbar", "social")):
             el.decompose()

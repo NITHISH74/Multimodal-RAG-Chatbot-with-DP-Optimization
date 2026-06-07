@@ -7,10 +7,42 @@ environment variables / Streamlit Cloud secrets.
 """
 import os
 
+try:
+    import streamlit as st
+except Exception:  # streamlit absent (e.g. tests / CLI tools)
+    st = None
+
+
+def _from_secrets(name):
+    """Read a value from Streamlit secrets, if available.
+
+    Accessing st.secrets triggers Streamlit's lazy parse, which also mirrors
+    string/int/float secrets into os.environ. We read it directly so that:
+      * booleans (e.g. crawl_allow_all = true) are honoured — Streamlit never
+        mirrors bool secrets into os.environ, so os.getenv would miss them;
+      * values are available at import time even before any other st.secrets
+        access has triggered the mirror.
+    Guarded broadly because st.secrets raises when no secrets file exists.
+    """
+    if st is None:
+        return None
+    try:
+        if name in st.secrets:
+            return st.secrets[name]
+    except Exception:
+        pass
+    return None
+
 
 def _get(name, default):
+    # Real env vars win (local dev / Docker), then Streamlit secrets, then default.
     val = os.getenv(name)
-    return val if val not in (None, "") else default
+    if val not in (None, ""):
+        return val
+    sval = _from_secrets(name)
+    if sval not in (None, ""):
+        return sval
+    return default
 
 
 def _int(name, default):

@@ -31,6 +31,8 @@ def is_allowed_domain(url):
     host = _domain(url)
     if not host:
         return False
+    if config.CRAWL_ALLOW_ALL:
+        return True  # explicit opt-in to crawl any domain
     if not config.CRAWL_ALLOWED_DOMAINS:
         return False  # nothing allowed until configured
     return any(host == d or host.endswith("." + d) for d in config.CRAWL_ALLOWED_DOMAINS)
@@ -80,7 +82,11 @@ def fetch_url(url):
         raise CrawlError("Invalid URL — must start with http:// or https://")
     if not is_allowed_domain(url):
         allowed = ", ".join(config.CRAWL_ALLOWED_DOMAINS) or "(none configured)"
-        raise CrawlError(f"Domain not in allowlist. Allowed: {allowed}")
+        raise CrawlError(
+            f"Domain '{_domain(url)}' is not allowed. Allowed: {allowed}. "
+            "Add it to the 'crawl_allowed_domains' secret (comma-separated), "
+            "or set 'crawl_allow_all = true' to permit any domain."
+        )
     if not robots_allows(url):
         raise CrawlError("Blocked by robots.txt for this URL.")
 

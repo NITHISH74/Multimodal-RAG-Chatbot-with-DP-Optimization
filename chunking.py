@@ -202,8 +202,13 @@ def chunk_document(file_name, file_bytes):
     return chunks
 
 
-def chunk_web_text(source_url, file_name, cleaned_text):
-    """Chunk already-cleaned web text (Phase 10). document_type == 'web'."""
+def chunk_web_text(source_url, file_name, cleaned_text, extra_metadata=None):
+    """Chunk already-cleaned web text (Phase 10). document_type == 'web'.
+
+    extra_metadata (optional dict) is carried on each chunk and merged into
+    the row's metadata jsonb at upsert time (page_title, domain,
+    crawl_timestamp, source_type ... for crawled pages).
+    """
     chunks, idx, seen = [], 0, set()
     for piece in split_text(cleaned_text):
         if not is_meaningful(piece):
@@ -212,7 +217,7 @@ def chunk_web_text(source_url, file_name, cleaned_text):
         if h in seen:
             continue
         seen.add(h)
-        chunks.append({
+        chunk = {
             "content": piece,
             "file_name": file_name,
             "document_type": "web",
@@ -221,7 +226,10 @@ def chunk_web_text(source_url, file_name, cleaned_text):
             "content_hash": h,
             "type": "text",
             "source_url": source_url,
-        })
+        }
+        if extra_metadata:
+            chunk["extra_metadata"] = extra_metadata
+        chunks.append(chunk)
         idx += 1
     return chunks
 

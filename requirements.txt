@@ -11,5 +11,5 @@ python-pptx
 supabase
 st-copy-to-clipboard
 requests
-beautifulsoup4
+crawl4ai
 psycopg2-binary

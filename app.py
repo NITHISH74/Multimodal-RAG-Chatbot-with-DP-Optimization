@@ -409,31 +409,64 @@ with st.sidebar:
             else:
                 st.error(f"Indexing failed: {e}")
 
-    # ── Web crawl (Phase 10) ────────────────────────────────────────
+    # ── Web crawl (Phase 10 — Crawl4AI) ─────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>🌐 Web Crawl</h3></div>", unsafe_allow_html=True)
-    crawl_url = st.text_input("Single URL to crawl", placeholder="https://example.com/page")
+    crawl_url = st.text_input("Website URL", placeholder="https://docs.example.com")
+    crawl_mode = st.radio("Crawl mode", ["Single page", "Entire website"],
+                          horizontal=True, key="crawl_mode",
+                          help="Entire website stays on the same domain, respects "
+                               "robots.txt and stops at the page limit.")
+    crawl_max_pages = config.CRAWL_MAX_PAGES_DEFAULT
+    if crawl_mode == "Entire website":
+        crawl_max_pages = int(st.number_input(
+            "Max pages", min_value=1, max_value=config.CRAWL_MAX_PAGES_LIMIT,
+            value=config.CRAWL_MAX_PAGES_DEFAULT))
     if config.CRAWL_ALLOW_ALL:
         st.caption("Allowed domains: **any** (crawl_allow_all is on; robots.txt still respected)")
     else:
         allowed = ", ".join(config.CRAWL_ALLOWED_DOMAINS) or "**none yet** — set `crawl_allowed_domains` or `crawl_allow_all=true`"
         st.caption(f"Allowed domains: {allowed}")
     if st.button("🕸️ Crawl & Index", use_container_width=True) and crawl_url:
-        with st.spinner("Crawling…"):
-            try:
-                title, text = crawl.fetch_url(crawl_url)
-                web_chunks = chunking.chunk_web_text(crawl_url, title or crawl_url, text)
-                owner = st.session_state.owner_id or None
-                n = 0
+        prog = st.progress(0.0, text="Starting crawl…")
+        try:
+            mode = "site" if crawl_mode == "Entire website" else "single"
+
+            def _crawl_cb(done, total, url):
+                prog.progress(min(done / max(total, 1), 0.99),
+                              text=f"Crawling page {done + 1}/{total}: {url[:60]}")
+
+            pages, skipped = crawl.crawl_pages(crawl_url, mode=mode,
+                                               max_pages=crawl_max_pages,
+                                               progress_cb=_crawl_cb)
+            owner = st.session_state.owner_id or None
+            n_chunks = 0
+            for i, pg in enumerate(pages):
+                prog.progress((i + 1) / max(len(pages), 1),
+                              text=f"Indexing {i + 1}/{len(pages)}: {pg['title'][:50]}")
+                page_meta = {"page_title": pg["title"], "domain": pg["domain"],
+                             "crawl_timestamp": pg["crawled_at"], "source_type": "web"}
+                web_chunks = chunking.chunk_web_text(pg["url"], pg["title"] or pg["url"],
+                                                     pg["markdown"], extra_metadata=page_meta)
                 for ch in web_chunks:
                     vecs = embed_text_all(ch["content"])
                     if rag_db.upsert_chunk_multi(ch, vecs, owner_id=owner) in ("inserted", "updated"):
-                        n += 1
-                cached_retrieve.clear()
-                st.success(f"Crawled '{title or crawl_url}' → indexed {n} chunk(s).")
-            except crawl.CrawlError as e:
-                st.error(f"Crawl blocked: {e}")
-            except Exception as e:
-                st.error(SCHEMA_HELP if is_schema_error(e) else f"Crawl failed: {e}")
+                        n_chunks += 1
+            cached_retrieve.clear()
+            prog.empty()
+            if pages:
+                st.success(f"Crawled {len(pages)} page(s) → indexed {n_chunks} chunk(s).")
+            else:
+                st.warning("Crawl finished, but no page yielded readable content.")
+            if skipped:
+                with st.expander(f"⚠️ {len(skipped)} page(s) skipped"):
+                    for u, reason in skipped[:20]:
+                        st.caption(f"{u} — {reason}")
+        except crawl.CrawlError as e:
+            prog.empty()
+            st.error(f"Crawl blocked: {e}")
+        except Exception as e:
+            prog.empty()
+            st.error(SCHEMA_HELP if is_schema_error(e) else f"Crawl failed: {e}")
 
     # ── History ─────────────────────────────────────────────────────
     st.markdown("<div class='sidebar-section'><h3>🕐 History</h3></div>", unsafe_allow_html=True)

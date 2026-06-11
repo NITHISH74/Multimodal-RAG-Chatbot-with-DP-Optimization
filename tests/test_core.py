@@ -150,15 +150,34 @@ def test_crawl_allowlist(monkeypatch):
     assert not crawl.is_allowed_domain("https://example.com")  # empty list => deny all
 
 
-def test_clean_html_strips_chrome():
-    html = """<html><head><title>My Page</title></head><body>
-      <nav>HOME ABOUT</nav><script>evil()</script>
-      <main><p>Real content paragraph one.</p><p>Second paragraph.</p></main>
-      <footer>copyright</footer></body></html>"""
-    title, text = crawl.clean_html(html)
-    assert title == "My Page"
-    assert "Real content paragraph one." in text
-    assert "evil" not in text and "HOME ABOUT" not in text and "copyright" not in text
+def test_tidy_markdown_dedupes_and_collapses():
+    md = "# Title\n\nAccept cookies\nAccept cookies\nAccept cookies\n\n\n\nReal paragraph."
+    out = crawl.tidy_markdown(md)
+    assert out.count("Accept cookies") == 1          # consecutive dupes dropped
+    assert "\n\n\n" not in out                        # blank runs collapsed
+    assert "# Title" in out and "Real paragraph." in out
+
+
+def test_normalize_url():
+    assert crawl.normalize_url("https://Example.com/docs/#intro") == "https://example.com/docs"
+    assert crawl.normalize_url("https://example.com") == "https://example.com/"
+    assert (crawl.normalize_url("https://example.com/a?x=1") ==
+            crawl.normalize_url("https://example.com/a/?x=1#frag"))
+
+
+def test_crawl_pages_rejects_bad_and_disallowed(monkeypatch):
+    monkeypatch.setattr(config, "CRAWL_ALLOW_ALL", False)
+    monkeypatch.setattr(config, "CRAWL_ALLOWED_DOMAINS", ("example.com",))
+    try:
+        crawl.crawl_pages("not-a-url")
+        assert False, "expected CrawlError"
+    except crawl.CrawlError as e:
+        assert "Invalid URL" in str(e)
+    try:
+        crawl.crawl_pages("https://evil.com/x")
+        assert False, "expected CrawlError"
+    except crawl.CrawlError as e:
+        assert "not allowed" in str(e)
 
 
 if __name__ == "__main__":

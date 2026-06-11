@@ -33,7 +33,7 @@
 | **Trustworthy** | Every answer ends with a **Sources** section (file · page/slide · similarity score). |
 | **Better data quality** | Sentence/slide-aware chunking, content-hash de-duplication, and garbage-text filtering keep the vector DB clean. |
 | **Multi-format & multimodal** | PDF, DOCX, PPTX, TXT/MD, and images — images stored in Supabase Storage (not bloating the DB as base64). |
-| **Extensible knowledge** | Manual, policy-respecting single-URL web crawl feeds the same pipeline. |
+| **Extensible knowledge** | Crawl4AI-powered web crawl (single page or same-domain site, JS-rendered sites supported) feeds the same pipeline. |
 | **Observable** | A dev-only diagnostics panel surfaces latency, token counts, and similarity scores per query. |
 | **Hardened** | Secrets stay server-side, Row-Level Security makes the anon key read-only, uploads are type/size-validated, optional per-user isolation. |
 
@@ -89,7 +89,7 @@
 | **Conversation summarization** | `conversation.py` | Running summary to cap prompt growth. |
 | **TOON (Token-Oriented Object Notation)** | `context_builder.py` | Compact tabular metadata encoding. |
 | **Intent routing** | `routing.py` | Lightweight keyword classifier (no agents/loops). |
-| **robots.txt + domain-allowlist crawling** | `crawl.py` | Polite, scoped single-page extraction with HTML cleaning. |
+| **robots.txt + domain-allowlist crawling** | `crawl.py` | Crawl4AI (headless Chromium) extraction to clean markdown; single-page or bounded same-domain crawl. |
 | **Row-Level Security (RLS)** | `0005_phase15_rls.sql` | Least-privilege DB access. |
 | **Parallel embedding (ThreadPool)** | `app.py` | Non-blocking, concurrent network-bound embeds. |
 
@@ -138,7 +138,7 @@ Answer  +  📚 Sources (file · page/slide · score)
 | [`retrieval.py`](retrieval.py) | Hybrid merge + Rerank-Lite |
 | [`context_builder.py`](context_builder.py) | Token budget, knapsack, dedup, citations, TOON |
 | [`routing.py`](routing.py) | Intent classification |
-| [`crawl.py`](crawl.py) | Manual single-URL crawl (robots + allowlist + cleaning) |
+| [`crawl.py`](crawl.py) | Crawl4AI crawler (robots + allowlist, single-page / same-domain site, markdown output) |
 | [`conversation.py`](conversation.py) | Running-summary memory |
 | [`tests/test_core.py`](tests/test_core.py) | Unit tests for the pure logic (15 passing) |
 | [`db/migrations/`](db/migrations/) | Ordered SQL migrations (source of truth) |

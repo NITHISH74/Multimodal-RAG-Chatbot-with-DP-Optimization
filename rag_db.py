@@ -125,6 +125,9 @@ def upsert_chunk_multi(chunk, vectors_by_model, image_path=None, owner_id=None):
             "type": chunk["type"],
             "page_number": chunk.get("page_number"),
             "chunk_index": chunk.get("chunk_index", 0),
+            # Crawled pages carry page_title / domain / crawl_timestamp /
+            # source_type — stored in the jsonb blob, no schema change.
+            **(chunk.get("extra_metadata") or {}),
         },
     }
     for m, vec in vectors.items():

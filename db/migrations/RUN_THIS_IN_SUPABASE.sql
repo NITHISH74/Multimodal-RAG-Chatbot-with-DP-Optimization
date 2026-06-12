@@ -38,6 +38,20 @@ create table if not exists chat_messages (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
+create table if not exists answer_feedback (
+  id bigserial primary key,
+  session_id text references chat_sessions(session_id) on delete cascade,
+  message_index integer not null,
+  rating text not null check (rating in ('up', 'down')),
+  question text,
+  answer text,
+  comment text,
+  meta jsonb default '{}'::jsonb,
+  owner_id text,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  unique (session_id, message_index)
+);
+
 -- ── Per-chunk columns (THIS fixes "content_hash does not exist") ────
 alter table documents add column if not exists file_name     text;
 alter table documents add column if not exists document_type text;
@@ -57,6 +71,8 @@ alter table documents add column if not exists fts tsvector
 create index if not exists documents_fts_gin on documents using gin (fts);
 create index if not exists documents_document_type_idx on documents (document_type);
 create index if not exists documents_owner_id_idx on documents (owner_id);
+create index if not exists answer_feedback_session_idx on answer_feedback (session_id);
+create index if not exists answer_feedback_rating_idx on answer_feedback (rating);
 
 -- ── ANN indexes (Cohere direct; Gemini via halfvec, needs pgvector >=0.7) ──
 create index if not exists documents_embedding_cohere_hnsw

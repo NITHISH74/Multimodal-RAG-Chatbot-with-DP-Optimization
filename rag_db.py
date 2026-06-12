@@ -229,3 +229,41 @@ def load_sessions(limit=20):
         s["messages"] = msgs
         s["timestamp"] = s["created_at"]
     return sessions
+
+
+# -----------------------------------------------------------------------------
+# Feedback
+# -----------------------------------------------------------------------------
+def save_feedback(session_id, message_index, rating, question, answer,
+                  comment="", meta=None, owner_id=None):
+    """Persist answer feedback for analytics and future quality review."""
+    sb = get_supabase_client()
+    row = {
+        "session_id": session_id,
+        "message_index": message_index,
+        "rating": rating,
+        "question": question,
+        "answer": answer,
+        "comment": comment or "",
+        "meta": meta or {},
+        "owner_id": owner_id,
+    }
+    sb.table("answer_feedback").upsert(
+        row,
+        on_conflict="session_id,message_index",
+    ).execute()
+
+
+def load_feedback_summary(limit=200):
+    """Return simple portfolio/admin feedback stats."""
+    sb = _read_client()
+    rows = sb.table("answer_feedback").select("rating").limit(limit).execute().data or []
+    positive = sum(1 for r in rows if r.get("rating") == "up")
+    negative = sum(1 for r in rows if r.get("rating") == "down")
+    total = positive + negative
+    return {
+        "total": total,
+        "positive": positive,
+        "negative": negative,
+        "positive_rate": (positive / total) if total else 0.0,
+    }

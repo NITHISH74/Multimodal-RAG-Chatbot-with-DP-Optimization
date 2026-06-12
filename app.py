@@ -83,6 +83,8 @@ def init_state():
         "current_session_id": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "summary": "", "owner_id": "", "dev_mode": config.DEV_MODE,
         "threshold": config.SIMILARITY_THRESHOLD,
+        "answer_feedback": {},
+        "feedback_guidance": [],
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -229,6 +231,18 @@ def _load_image_from_url(url):
         return None
 
 
+def build_feedback_guidance():
+    notes = [n.strip() for n in st.session_state.feedback_guidance if n.strip()]
+    if not notes:
+        return ""
+    recent = "\n".join(f"- {n}" for n in notes[-3:])
+    return (
+        "User feedback from this session:\n"
+        f"{recent}\n"
+        "Apply this style/quality feedback when it is relevant, but keep answers grounded in retrieved sources."
+    )
+
+
 def run_rag_pipeline(user_query, model_name):
     threshold = float(st.session_state.threshold)
     meta = {"retrieval_time": 0.0, "generation_time": 0.0, "context_chunks": 0,
@@ -239,6 +253,7 @@ def run_rag_pipeline(user_query, model_name):
     # (it is added explicitly as the Question below).
     prior_messages = st.session_state.messages[:-1] if st.session_state.messages else []
     history_block = conversation.build_history_block(prior_messages, st.session_state.summary)
+    feedback_block = build_feedback_guidance()
 
     # ── Phase 11: intent routing ────────────────────────────────────
     intent = routing.classify_intent(user_query)
@@ -247,7 +262,8 @@ def run_rag_pipeline(user_query, model_name):
     # ── General query: skip RAG entirely (Phase 11) ─────────────────
     if intent == "general":
         t1 = time.time()
-        prompt = (f"{history_block}\n\n" if history_block else "") + user_query
+        parts = [p for p in [history_block, feedback_block, user_query] if p]
+        prompt = "\n\n".join(parts)
         response_text = _generate(prompt, [], meta)
         meta["generation_time"] = time.time() - t1
         return response_text, meta, []
@@ -287,6 +303,8 @@ def run_rag_pipeline(user_query, model_name):
     prompt_parts = []
     if history_block:
         prompt_parts.append(history_block)
+    if feedback_block:
+        prompt_parts.append(feedback_block)
     prompt_parts.append(
         "Use ONLY the context below to answer. Cite sources by file name. "
         "If the context is insufficient, say so.\n\n"
@@ -541,6 +559,83 @@ def render_dev_panel(meta):
                    f"Similarity/rerank scores: {meta.get('scores')}")
 
 
+def _previous_user_question(message_index):
+    for j in range(message_index - 1, -1, -1):
+        msg = st.session_state.messages[j]
+        if msg.get("role") == "user":
+            return msg.get("content", "")
+    return ""
+
+
+def submit_feedback(message_index, rating, comment=""):
+    msg = st.session_state.messages[message_index]
+    st.session_state.answer_feedback[message_index] = {
+        "rating": rating,
+        "comment": comment or "",
+    }
+    if rating == "down" and comment:
+        st.session_state.feedback_guidance.append(comment)
+    try:
+        rag_db.save_feedback(
+            st.session_state.current_session_id,
+            message_index,
+            rating,
+            _previous_user_question(message_index),
+            msg.get("content", ""),
+            comment=comment,
+            meta=msg.get("meta", {}),
+            owner_id=st.session_state.owner_id or None,
+        )
+        st.toast("Feedback saved. Thank you.")
+    except Exception as e:
+        st.warning(SCHEMA_HELP if is_schema_error(e) else f"Could not save feedback: {e}")
+
+
+def render_feedback_controls(message_index):
+    saved = st.session_state.answer_feedback.get(message_index)
+    if saved:
+        label = "Helpful" if saved.get("rating") == "up" else "Needs improvement"
+        st.caption(f"Feedback: {label}")
+        return
+
+    cols = st.columns([1, 1, 4])
+    if cols[0].button("Helpful", key=f"fb_up_{message_index}", use_container_width=True):
+        submit_feedback(message_index, "up")
+        st.rerun()
+    if cols[1].button("Improve", key=f"fb_down_{message_index}", use_container_width=True):
+        st.session_state[f"fb_open_{message_index}"] = True
+
+    if st.session_state.get(f"fb_open_{message_index}"):
+        with st.form(f"fb_form_{message_index}", clear_on_submit=True):
+            comment = st.text_area(
+                "What should be improved?",
+                placeholder="Example: answer more directly, include page references, avoid extra explanation...",
+                key=f"fb_comment_{message_index}",
+            )
+            submitted = st.form_submit_button("Save feedback")
+            if submitted:
+                submit_feedback(message_index, "down", comment)
+                st.session_state[f"fb_open_{message_index}"] = False
+                st.rerun()
+
+
+def render_feedback_summary():
+    if not st.session_state.dev_mode:
+        return
+    try:
+        stats = rag_db.load_feedback_summary()
+    except Exception:
+        return
+    if not stats["total"]:
+        return
+    with st.expander("Answer feedback summary", expanded=False):
+        cols = st.columns(4)
+        cols[0].metric("Feedback", stats["total"])
+        cols[1].metric("Helpful", stats["positive"])
+        cols[2].metric("Improve", stats["negative"])
+        cols[3].metric("Helpful rate", f"{stats['positive_rate'] * 100:.0f}%")
+
+
 for i, msg in enumerate(st.session_state.messages):
     if msg["role"] == "user":
         with st.chat_message("user", avatar="👤"):
@@ -557,6 +652,9 @@ for i, msg in enumerate(st.session_state.messages):
                 with cols[3]:
                     st_copy_to_clipboard(msg["content"], key=f"copy_hist_{i}")
                 render_dev_panel(m)
+                render_feedback_controls(i)
+
+render_feedback_summary()
 
 if user_input := st.chat_input("Ask about your documents…"):
     st.session_state.messages.append({"role": "user", "content": user_input})

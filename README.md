@@ -1,254 +1,199 @@
-# 🧠 Multi-Model Advanced RAG Chatbot — **V3**
+# Multi-Model Advanced RAG Chatbot
 
-> A production-minded, **Retrieval-Augmented Generation** system on a 100% **Supabase** backend (pgvector + Storage), deployable for free on **Streamlit Cloud**. V3 is a ground-up overhaul: hybrid retrieval, a local reranker, token-optimized context, cited answers, anti-hallucination fallback, manual web crawl, query routing, and security hardening.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Gemini](https://img.shields.io/badge/Gemini-LLM-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 
-**🔴 Live Demo:** [multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app](https://multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app/)
+A production-minded **multimodal Retrieval-Augmented Generation chatbot** built with a custom RAG pipeline, not LangChain or LlamaIndex. It supports document/image ingestion, hybrid retrieval, reranking, token-budgeted context optimization, cited answers, web crawling, feedback collection, and Supabase-backed persistence.
 
-**Stack:** Gemini 2.5 Flash (generation) • Gemini Embedding 2 / Cohere v4.0 (dual embeddings) • Supabase pgvector + Storage • Streamlit
+**Live Demo:** [multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app](https://multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app/)
 
----
+## Highlights
 
-## 📑 Table of Contents
-- [Why V3 (Advantages)](#-why-v3-advantages)
-- [Feature Overview](#-feature-overview)
-- [Techniques Used](#-techniques-used)
-- [The Query Pipeline](#-the-query-pipeline)
-- [Architecture & Modules](#-architecture--modules)
-- [Installation & Setup](#️-installation--setup)
-- [Database Migrations](#-database-migrations)
-- [Configuration Reference](#-configuration-reference)
-- [Security](#-security)
-- [Testing](#-testing)
-- [Deployment (Streamlit Cloud)](#-deployment-streamlit-cloud)
+- **Custom RAG framework** with explicit retrieval, reranking, context building, and citation logic.
+- **Hybrid search** using Supabase pgvector semantic retrieval plus PostgreSQL full-text search.
+- **Rerank-Lite** combines semantic similarity, keyword overlap, and recency.
+- **0/1 Knapsack context optimization** selects the highest-value chunks under a token budget.
+- **Multimodal ingestion** for PDF, DOCX, PPTX, TXT/MD, and images.
+- **Cited answers** with file/page/slide references and similarity scores.
+- **Safe fallback** when retrieved context is not relevant enough.
+- **Web crawling** with Crawl4AI, robots.txt handling, and domain allowlisting.
+- **User feedback loop** with helpful/improve controls and feedback analytics.
+- **Production-oriented security** with server-side secrets, upload validation, and RLS migrations.
 
----
+## Tech Stack
 
-## 🚀 Why V3 (Advantages)
+| Layer | Technology |
+|-------|------------|
+| UI | Streamlit |
+| LLM | Gemini 2.5 Flash |
+| Embeddings | Gemini Embedding 2, Cohere Embed v4 |
+| Vector Database | Supabase PostgreSQL + pgvector |
+| Keyword Search | PostgreSQL full-text search |
+| Storage | Supabase Storage for images |
+| Crawling | Crawl4AI |
+| Optimization | Dynamic Programming 0/1 Knapsack |
+| Testing | Pytest |
 
-| Advantage | How V3 delivers it |
-|-----------|--------------------|
-| **More accurate retrieval** | Hybrid search (semantic **+** keyword) catches both meaning *and* exact terms/IDs/names, then a local reranker reorders by combined signals. |
-| **No hallucinated answers** | A real similarity **threshold** filters weak matches; if nothing is relevant the bot returns a configurable "not found" message instead of guessing. |
-| **Faster & cheaper** | HNSW ANN indexes, query-level caching, parallel embedding, token-budgeted context, running-summary memory, and TOON-compressed metadata cut both latency and token spend. |
-| **Trustworthy** | Every answer ends with a **Sources** section (file · page/slide · similarity score). |
-| **Better data quality** | Sentence/slide-aware chunking, content-hash de-duplication, and garbage-text filtering keep the vector DB clean. |
-| **Multi-format & multimodal** | PDF, DOCX, PPTX, TXT/MD, and images — images stored in Supabase Storage (not bloating the DB as base64). |
-| **Extensible knowledge** | Crawl4AI-powered web crawl (single page or same-domain site, JS-rendered sites supported) feeds the same pipeline. |
-| **Observable** | A dev-only diagnostics panel surfaces latency, token counts, and similarity scores per query. |
-| **Hardened** | Secrets stay server-side, Row-Level Security makes the anon key read-only, uploads are type/size-validated, optional per-user isolation. |
+## Architecture
 
----
-
-## ✨ Feature Overview
-
-### Retrieval & Generation
-- **Dual embedding models** — switch between **Gemini** and **Cohere** at runtime.
-- **Hybrid search** — pgvector cosine similarity **+** Postgres full-text (`tsvector`) keyword search, merged and de-duplicated by chunk id.
-- **Rerank-Lite** — a free, local reranker scoring each candidate by *similarity + keyword overlap + recency*; only the top 5–7 chunks reach the LLM.
-- **Similarity threshold** — weak matches are excluded in SQL (default `0.70`, configurable).
-- **Safe fallback** — no relevant chunks ⇒ a configurable message, never an empty-context guess.
-- **Citations** — answers append a clean **Sources** list.
-- **Query routing** — intent classifier sends each query to *document / image / web* retrieval, or answers *general* chit-chat directly (skipping RAG).
-
-### Ingestion & Data Quality
-- **Smart chunking** — respects page (PDF) / slide (PPTX) boundaries, then splits paragraph- and sentence-aware with overlap.
-- **De-duplication** — `sha256(file + content)` hash prevents re-storing identical chunks.
-- **Garbage filtering** — drops empty, too-short (< 20 chars), and gibberish chunks.
-- **Per-chunk metadata** — `file_name`, `page_number`/`slide_number`, `chunk_index`, `upload_date`, `document_type`, `content_hash`, `source_url`.
-- **Image storage** — images go to a Supabase **Storage** bucket; the DB keeps only the URL + metadata.
-- **Upload guardrails** — type allowlist + 20 MB limit, staged status (`uploaded → extracting → embedding → completed/failed`), parallel non-blocking embedding.
-
-### Efficiency & Memory
-- **HNSW ANN indexes** — Cohere (1536-d) directly; Gemini (3072-d) via a `halfvec` index (pgvector's HNSW caps at 2000 dims).
-- **Query cache** — repeated queries reuse the embedding + DB lookup.
-- **Token-budgeted context** — token estimation (≈4 chars/token) + a **0/1 Knapsack DP** optimizer pick the most relevant chunks under a token budget; semantic dedup removes near-identical chunks.
-- **Running-summary memory** — instead of resending the whole chat, a rolling summary + the last few turns are sent.
-- **TOON metadata** — compact Token-Oriented format for chunk metadata only (never for raw document text).
-
-### Ops & Security
-- **Dev/Admin panel** — per-query retrieval/generation/total latency, chunk count, input/output tokens, similarity scores (hidden from end users).
-- **RLS** — anon key is read-only; service key (server-side only) handles writes.
-- **Optional per-user isolation** via `owner_id`.
-
----
-
-## 🧪 Techniques Used
-
-| Technique | Where | What it does |
-|-----------|-------|--------------|
-| **HNSW (Hierarchical Navigable Small World)** | `0001_phase1_hnsw.sql` | Approximate-nearest-neighbour index for fast vector search. |
-| **`halfvec` half-precision indexing** | `0001` | Lets the 3072-d Gemini vectors be HNSW-indexed despite pgvector's 2000-d limit. |
-| **Hybrid (dense + sparse) retrieval** | `retrieval.py`, `keyword_search` RPC | Combines vector similarity with `tsvector`/`ts_rank` keyword matching. |
-| **Learning-to-rank style Rerank-Lite** | `retrieval.py` | Weighted linear fusion of similarity, keyword overlap, recency. |
-| **Cosine-distance threshold filtering** | `0003_*.sql` | `WHERE 1-(embedding <=> query) >= threshold`. |
-| **0/1 Knapsack Dynamic Programming** | `context_builder.py` | Maximizes total relevance under a token budget (the project's signature optimizer). |
-| **Token estimation & budgeting** | `context_builder.py` | ~4 chars/token heuristic to bound context size. |
-| **Semantic / near-duplicate dedup** | `context_builder.py` | Token-set Jaccard removes redundant same-file chunks. |
-| **Sentence/paragraph & page/slide-aware chunking** | `chunking.py` | Structure-preserving splitting with overlap. |
-| **Content-hash de-duplication** | `chunking.py`, `rag_db.py` | SHA-256 idempotent inserts. |
-| **Conversation summarization** | `conversation.py` | Running summary to cap prompt growth. |
-| **TOON (Token-Oriented Object Notation)** | `context_builder.py` | Compact tabular metadata encoding. |
-| **Intent routing** | `routing.py` | Lightweight keyword classifier (no agents/loops). |
-| **robots.txt + domain-allowlist crawling** | `crawl.py` | Crawl4AI (headless Chromium) extraction to clean markdown; single-page or bounded same-domain crawl. |
-| **Row-Level Security (RLS)** | `0005_phase15_rls.sql` | Least-privilege DB access. |
-| **Parallel embedding (ThreadPool)** | `app.py` | Non-blocking, concurrent network-bound embeds. |
-
----
-
-## 🔁 The Query Pipeline
-
+```mermaid
+flowchart TD
+    A["Upload documents / crawl website"] --> B["Extract text and metadata"]
+    B --> C["Chunking, cleaning, deduplication"]
+    C --> D["Gemini + Cohere embeddings"]
+    D --> E["Supabase documents table"]
+    E --> F["pgvector semantic search"]
+    E --> G["PostgreSQL keyword search"]
+    F --> H["Merge and deduplicate results"]
+    G --> H
+    H --> I["Rerank-Lite"]
+    I --> J["Semantic deduplication"]
+    J --> K["0/1 Knapsack context optimizer"]
+    K --> L["Prompt with citations and TOON metadata"]
+    L --> M["Gemini 2.5 Flash"]
+    M --> N["Answer with sources"]
+    N --> O["User feedback"]
 ```
+
+## Query Pipeline
+
+```text
 User query
-   │
-   ▼
-[Route]  intent = document | image | web | general
-   │                                   └── general ─▶ answer directly (skip RAG)
-   ▼
-[Embed query]  (Gemini or Cohere)  ── cached ──┐
-   ▼                                            │
-[Hybrid retrieve]  vector (threshold-filtered) + keyword
-   ▼
-[Merge + dedup]  by chunk id
-   ▼
-[Rerank-Lite]  similarity + keyword overlap + recency  ─▶ top 5–7
-   ▼
-[Semantic dedup] ─▶ [Knapsack DP under token budget]
-   │
-   ├── no chunks ─▶ Safe fallback message
-   ▼
-[Build context]  citations + TOON metadata  (+ history summary)
-   ▼
-[Generate]  Gemini 2.5 Flash  (+ images from Storage)
-   ▼
-Answer  +  📚 Sources (file · page/slide · score)
+  -> intent routing
+  -> query embedding
+  -> vector search + keyword search
+  -> merge and deduplicate chunks
+  -> Rerank-Lite scoring
+  -> semantic deduplication
+  -> DP knapsack context selection
+  -> Gemini generation
+  -> cited answer + feedback capture
 ```
 
----
+## Why This Project Is Advanced
 
-## 🧩 Architecture & Modules
+| Capability | What it demonstrates |
+|------------|----------------------|
+| Custom RAG pipeline | Understanding of the full retrieval and generation flow beyond framework wrappers |
+| Hybrid retrieval | Better recall for both semantic questions and exact keyword/name queries |
+| Reranking | Higher-quality evidence selection before generation |
+| DP context optimization | Token-efficient selection of the best chunks under a budget |
+| Citations | Grounded answers with transparent source references |
+| Feedback capture | Product-style quality monitoring and future improvement loop |
+| Supabase backend | Deployable architecture with persistent documents, history, images, and feedback |
+| Security hardening | Server-side secrets, upload validation, RLS, and optional owner isolation |
 
-| Module | Responsibility |
-|--------|----------------|
-| [`app.py`](app.py) | Streamlit UI + pipeline orchestration, upload/crawl, dev panel |
-| [`config.py`](config.py) | All tunables, fallback message, allowlist, dev flag (env-overridable) |
-| [`clients.py`](clients.py) | Cached Gemini / Cohere / Supabase clients (service + anon) |
-| [`chunking.py`](chunking.py) | Parsing + structure-aware chunking + cleaning + hashing |
-| [`embeddings.py`](embeddings.py) | Text / image / query embedding (both models) |
-| [`rag_db.py`](rag_db.py) | Dedup-aware upsert, image→Storage, vector/keyword RPCs, history |
-| [`retrieval.py`](retrieval.py) | Hybrid merge + Rerank-Lite |
-| [`context_builder.py`](context_builder.py) | Token budget, knapsack, dedup, citations, TOON |
-| [`routing.py`](routing.py) | Intent classification |
-| [`crawl.py`](crawl.py) | Crawl4AI crawler (robots + allowlist, single-page / same-domain site, markdown output) |
-| [`conversation.py`](conversation.py) | Running-summary memory |
-| [`tests/test_core.py`](tests/test_core.py) | Unit tests for the pure logic (15 passing) |
-| [`db/migrations/`](db/migrations/) | Ordered SQL migrations (source of truth) |
+## Benchmark Comparison
 
-> `rag_chatbot.py` (local FAISS CLI) is **legacy** and not used by the web app.
+| Pipeline Variant | Retrieval | Context Selection | Strength |
+|------------------|-----------|------------------|----------|
+| Basic Vector RAG | pgvector top-k only | Send top chunks directly | Simple baseline |
+| Hybrid RAG | Vector + keyword search | Reranked top chunks | Better recall and ranking |
+| Advanced RAG with DP | Hybrid + Rerank-Lite | Knapsack under token budget | Higher signal-to-token ratio |
+| Feedback-Aware RAG | Advanced RAG + feedback | Uses recent corrections as guidance | More product-ready user experience |
 
----
+Suggested metrics for future reporting:
 
-## 🛠️ Installation & Setup
+- Retrieval latency
+- Generation latency
+- Context chunks selected
+- Estimated input/output tokens
+- Citation correctness
+- User helpful rate
 
-### 1. Clone & create a virtual environment
+## Project Structure
+
+| File | Purpose |
+|------|---------|
+| `app.py` | Streamlit UI, upload/crawl flows, chat pipeline, diagnostics, feedback UI |
+| `rag_db.py` | Supabase access layer for documents, search RPCs, history, feedback |
+| `retrieval.py` | Hybrid result merge and Rerank-Lite scoring |
+| `context_builder.py` | Semantic deduplication, token budgeting, knapsack selection, citations |
+| `chunking.py` | Document parsing, chunking, cleaning, content hashing |
+| `embeddings.py` | Gemini and Cohere embedding helpers |
+| `routing.py` | Query intent routing |
+| `crawl.py` | Crawl4AI ingestion with allowlist and robots.txt handling |
+| `conversation.py` | Running-summary chat memory |
+| `db/migrations/` | Supabase schema, indexes, RPCs, storage, RLS, feedback tables |
+| `tests/test_core.py` | Unit tests for core pure-Python logic |
+
+## Setup
+
+### 1. Create environment
+
 ```bash
 py -m venv .venv
-.venv\Scripts\activate      # Windows
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Create your `.env`
-Copy [`.env.example`](.env.example) to `.env` and fill in your keys. **Never commit `.env`** (it is gitignored).
+### 2. Configure secrets
+
+Copy `.env.example` to `.env` and fill in your keys:
+
 ```ini
-gemini_api_key  = YOUR_GEMINI_API_KEY
-cohere_api_key  = YOUR_COHERE_API_KEY
-project_url     = https://YOUR_PROJECT.supabase.co
-service_key     = YOUR_SUPABASE_SERVICE_ROLE_KEY   # server-side only
-anon_key        = YOUR_SUPABASE_ANON_KEY           # optional, read-only path
+gemini_api_key=YOUR_GEMINI_API_KEY
+cohere_api_key=YOUR_COHERE_API_KEY
+project_url=https://YOUR_PROJECT.supabase.co
+service_key=YOUR_SUPABASE_SERVICE_ROLE_KEY
+anon_key=YOUR_SUPABASE_ANON_KEY
+supabase_db_url=YOUR_SUPABASE_SESSION_POOLER_URL
 ```
 
-### 3. Run
+### 3. Initialize database
+
+Use either option:
+
+- In the app sidebar, click **Initialize Database** if `supabase_db_url` is configured.
+- Or run `db/migrations/RUN_THIS_IN_SUPABASE.sql` in the Supabase SQL Editor.
+
+For existing deployments that only need the feedback feature, run `db/migrations/0006_answer_feedback.sql` in the Supabase SQL Editor.
+
+### 4. Run locally
+
 ```bash
 streamlit run app.py
 ```
 
----
+## Database Features
 
-## 🗄️ Database Setup
+- `documents` table with Gemini and Cohere embedding columns
+- HNSW indexes for fast approximate vector search
+- PostgreSQL full-text index for keyword retrieval
+- RPC functions for threshold-filtered vector search and keyword search
+- Supabase Storage bucket for image files
+- Chat session and message persistence
+- Answer feedback table for helpful/improve analytics
+- RLS policies for read-only anon access
 
-**The database schema must be applied once before indexing/search will work.** Choose one:
-
-### Option A — One-click in-app setup (easiest)
-1. In Supabase → **Project Settings → Database → Connection string → Session pooler**, copy the URI
-   (`postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`) and put your DB password in it.
-   > Use the **Session pooler** URI — Streamlit Cloud is IPv4-only and Supabase's direct connection is IPv6-only.
-2. Add it as the **`supabase_db_url`** secret (Streamlit Cloud → Manage app → Secrets, or your `.env`).
-3. In the app sidebar → **🔧 Database → Initialize Database**. You should see **"Schema ready ✅"**. Done.
-
-### Option B — Manual SQL (no extra secret)
-Run [`db/migrations/RUN_THIS_IN_SUPABASE.sql`](db/migrations/RUN_THIS_IN_SUPABASE.sql) in the Supabase **SQL Editor** (one paste),
-or apply the individual migrations in [`db/migrations/`](db/migrations/) **in numeric order** (or `supabase db push`):
-
-| File | What it does |
-|------|--------------|
-| `0000_baseline.sql` | Base tables + vector search RPCs |
-| `0001_phase1_hnsw.sql` | HNSW ANN indexes (Cohere direct, Gemini via `halfvec`) |
-| `0002_phase2_chunk_metadata.sql` | Per-chunk metadata columns, content-hash dedup, full-text `tsvector` |
-| `0003_phase3_threshold_and_hybrid.sql` | Threshold filtering + `keyword_search` for hybrid retrieval |
-| `0004_phase8_storage.sql` | `rag-images` Storage bucket + public-read policy |
-| `0005_phase15_rls.sql` | Row-Level Security: anon key is read-only (see [SECURITY.md](SECURITY.md)) |
-
-> Requires **pgvector ≥ 0.7** (for `halfvec`) — Supabase ships 0.8+. Verify:
-> `select extversion from pg_extension where extname='vector';`
-
----
-
-## ⚙️ Configuration Reference
-
-All values live in [`config.py`](config.py) and can be overridden by env vars / Streamlit secrets.
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `similarity_threshold` | `0.70` | Min cosine similarity for a chunk to count |
-| `retrieval_match_count` | `10` | Vector candidates fetched per query |
-| `keyword_match_count` | `10` | Keyword candidates fetched per query |
-| `rerank_top_k` | `6` | Chunks sent to the LLM (5–7) |
-| `max_context_tokens` | `1500` | Token budget for the knapsack |
-| `chunk_target_chars` | `1200` | Target chunk size (~300 tokens) |
-| `max_upload_mb` | `20` | Per-file upload limit |
-| `supabase_image_bucket` | `rag-images` | Storage bucket for images |
-| `crawl_allowed_domains` | *(empty)* | Comma-separated allowlist; **empty = crawl disabled** |
-| `dev_mode` | `false` | Show the per-query diagnostics panel |
-| `fallback_message` | *(built-in)* | Override the "not found" message |
-
----
-
-## 🔐 Security
-
-See [SECURITY.md](SECURITY.md) for the full model. In short:
-- All Python runs **server-side** (Streamlit) — secrets never reach the browser.
-- `.env` is gitignored; no secrets are hardcoded.
-- **RLS** (migration `0005`) makes the anon key **read-only**; writes use the server-side service key.
-- Uploads are **type + size validated**.
-- Optional **per-user isolation** via `owner_id` (full enforcement needs Supabase Auth — policy provided).
-
----
-
-## ✅ Testing
+## Testing
 
 ```bash
-python tests/test_core.py        # 15 pure-logic tests, no DB/keys needed
+py -m pytest tests/ -q
 ```
-Covers chunking, cleaning, hashing, routing, merge/rerank, token budget, knapsack, dedup, citations, TOON, history, and crawl safety.
 
----
+Current status:
 
-## 🌐 Deployment (Streamlit Cloud)
+```text
+17 passed
+```
 
-1. Apply all migrations and create the `rag-images` Storage bucket.
-2. Push to GitHub, then on [Streamlit Community Cloud](https://share.streamlit.io) → **Create app** → point to `app.py`.
-3. Add your secrets under **Advanced settings → Secrets** (same keys as `.env`).
-4. Deploy. The architecture is stateless — chat history and documents live in Supabase, so server resets lose nothing.
+The tests cover chunking, hashing, routing, retrieval merge/rerank logic, token budgeting, knapsack selection, citations, TOON metadata, conversation history, and crawl safety.
 
----
+## Deployment
 
-<sub>Built with the **0/1 Knapsack DP context optimizer** at its core — now wrapped in a full hybrid-retrieval, reranking, cited, and hardened RAG pipeline.</sub>
+This app is designed for Streamlit Community Cloud:
+
+1. Apply Supabase migrations.
+2. Push the project to GitHub.
+3. Create a Streamlit app pointing to `app.py`.
+4. Add the same keys from `.env` as Streamlit secrets.
+5. Deploy.
+
+The app is stateless at the server layer. Documents, images, chat history, and feedback are stored in Supabase.
+
+## Portfolio Summary
+
+This project showcases an end-to-end **Advanced Multimodal RAG system** using a custom retrieval pipeline, Supabase pgvector, hybrid search, reranking, Dynamic Programming context optimization, grounded citations, feedback analytics, and production-style deployment practices.

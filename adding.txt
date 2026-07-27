@@ -1,7 +1,15 @@
+Need to do:
 1. Reduce the RAG Latency.
 2. Improve the RAG data quality.
-3. Add the agent webcrawl to crawl the website and save in DB.
-4. want to check the vector DB or grph DB which is best.
-5. try to increase the input upload data size.
-6. Make this Multi model RAG as Advance Agentic RAG system. (Check which RAG system better in production ready application)
-7. Try to add the TOON in this RAG to reduce the consumption of the Token usage.
+3. try to increase the input upload data size.
+4. Make this Multi model RAG as Advance Agentic RAG system. (Check which RAG system better in production ready application)
+5. Try to add the TOON in this RAG to reduce the consumption of the Token usage.
+
+chech this things in Multi modal Rag 
+1. Check the technique used here
+2. Check how the metadata is processed and how it is used
+3. What are the process are involve in Chunking, cleaning, how we handle the duplicate
+4. For Searching check how it is process & Try to used Hybrid (Semantic + Vector / keyword)
+5. How the ranking process is done & which Re-Ranking Technique is used
+6. Why use the 0/1 knapsack here
+7. How the overall RAG is working here (Steps, Technical flow, Process, used methodology & technical)

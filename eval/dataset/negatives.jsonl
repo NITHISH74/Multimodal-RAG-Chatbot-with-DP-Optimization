@@ -1,0 +1,8 @@
+{"id": "neg-01", "category": "negative", "query": "What is the meaning of life?", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-02", "category": "negative", "query": "How do I bake a chocolate cake?", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-03", "category": "negative", "query": "Who won the 2022 FIFA World Cup?", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-04", "category": "negative", "query": "Tell me about the migratory patterns of Arctic terns", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-05", "category": "negative", "query": "What is the recipe for ratatouille?", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-06", "category": "negative", "query": "Who is the current CEO of Microsoft?", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-07", "category": "negative", "query": "Explain the rules of cricket", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}
+{"id": "neg-08", "category": "negative", "query": "How tall is Mount Everest?", "expected_files": [], "expected_keywords": [], "should_fallback": true, "k": 5}

@@ -57,20 +57,31 @@ def semantic_dedup(rows, threshold=None):
 
 def knapsack_select(candidates, token_budget=None):
     """0/1 Knapsack DP: pick the chunk subset maximising total relevance
-    (rerank_score / similarity) without exceeding the TOKEN budget."""
+    (rerank_score / similarity) without exceeding the TOKEN budget.
+
+    Fast-path: when every candidate fits inside the budget, the optimal
+    solution is "take everything" — we skip the O(n*W) table entirely.
+    """
     token_budget = token_budget or config.MAX_CONTEXT_TOKENS
     n = len(candidates)
     if n == 0:
         return []
+
+    weights = [max(1, estimate_tokens(c.get("content", ""))) for c in candidates]
+    if sum(weights) <= token_budget:
+        # Fast path: greedy-is-optimal when everything fits. Preserves the
+        # rerank order so the LLM sees the strongest chunks first.
+        return list(candidates)
+
     # Scale tokens down to keep the DP table small.
     SCALE = 5
     W = max(1, token_budget // SCALE)
-    weights = [max(1, estimate_tokens(c.get("content", "")) // SCALE) for c in candidates]
+    scaled_weights = [max(1, w // SCALE) for w in weights]
     values = [c.get("rerank_score", c.get("similarity", 0.0)) for c in candidates]
 
     dp = [[0.0] * (W + 1) for _ in range(n + 1)]
     for i in range(1, n + 1):
-        wi, vi = weights[i - 1], values[i - 1]
+        wi, vi = scaled_weights[i - 1], values[i - 1]
         for w in range(1, W + 1):
             dp[i][w] = dp[i - 1][w]
             if wi <= w:
@@ -80,7 +91,7 @@ def knapsack_select(candidates, token_budget=None):
     for i in range(n, 0, -1):
         if dp[i][w] != dp[i - 1][w]:
             chosen.append(candidates[i - 1])
-            w -= weights[i - 1]
+            w -= scaled_weights[i - 1]
     chosen.reverse()
     return chosen
 

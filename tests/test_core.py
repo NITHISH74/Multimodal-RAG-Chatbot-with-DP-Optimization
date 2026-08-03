@@ -25,6 +25,19 @@ def test_normalize_and_meaningful():
     assert chunking.is_meaningful("This is a real sentence with words.")
 
 
+def test_is_meaningful_drops_boilerplate():
+    # Common nav / cookie / footer lines that the chunker should drop
+    assert not chunking.is_meaningful("Accept Cookies")
+    assert not chunking.is_meaningful("Privacy Policy")
+    assert not chunking.is_meaningful("Copyright © 2024 Acme Inc")
+
+
+def test_is_meaningful_drops_low_density():
+    # 50 punctuation chars, 4 word chars, 24 punctuation chars → density ~0.05
+    sparse = "!" * 50 + " " + "ab" + " " + "?" * 24
+    assert not chunking.is_meaningful(sparse)
+
+
 def test_split_text_respects_target():
     text = ". ".join(f"Sentence number {i} has some words" for i in range(200))
     chunks = chunking.split_text(text, target_chars=200, overlap_chars=20)
@@ -85,6 +98,28 @@ def test_rerank_orders_and_limits():
     assert all("rerank_score" in r for r in out)
 
 
+def test_rerank_then_gate_drops_low_signal(monkeypatch):
+    """Strengthened fallback: a chunk that clears the vector threshold but
+    has a near-zero rerank-lite score should be dropped by _drop_below_gate."""
+    # Raise the floor so the low-signal row really fails it.
+    monkeypatch.setattr(retrieval.config, "MIN_RERANK_SCORE", 0.20)
+    rows = [
+        {"id": 1, "content": "x y z q", "similarity": 0.30, "keyword_rank": 0.0},
+        {"id": 2, "content": "real content about topic", "similarity": 0.50, "keyword_rank": 0.0},
+    ]
+    ranked = retrieval.rerank_lite("topic", rows, top_k=10)
+    gated = retrieval._drop_below_gate(ranked)
+    # 1 has high similarity but a "x y z q" content means near-zero overlap → rerank low → dropped
+    assert 1 not in [r["id"] for r in gated]
+    assert 2 in [r["id"] for r in gated]
+
+
+def test_gate_drops_keyword_only_trivial_hits():
+    """Trivial keyword hits (ts_rank below the floor) get dropped."""
+    rows = [{"id": 1, "content": "x", "similarity": 0.0, "keyword_rank": 0.01}]
+    assert retrieval._drop_below_gate(rows) == []
+
+
 # ── context: tokens, knapsack, dedup, citations, TOON (Phase 6/7/13) ──
 def test_token_estimate():
     assert context_builder.estimate_tokens("a" * 40) == 10
@@ -112,6 +147,19 @@ def test_knapsack_respects_budget():
     assert chosen and 1 in [c["id"] for c in chosen]
     total_tokens = sum(context_builder.estimate_tokens(c["content"]) for c in chosen)
     assert total_tokens <= 220
+
+
+def test_knapsack_fast_path_when_everything_fits():
+    """When all candidates fit, knapsack_select returns them all
+    in the original order (greedy-is-optimal)."""
+    rows = [
+        {"id": 1, "content": "alpha", "rerank_score": 0.9},
+        {"id": 2, "content": "beta", "rerank_score": 0.7},
+        {"id": 3, "content": "gamma", "rerank_score": 0.5},
+    ]
+    # 200 tokens ≫ 3 tiny chunks → fast path, no DP table built
+    chosen = context_builder.knapsack_select(rows, token_budget=200)
+    assert [c["id"] for c in chosen] == [1, 2, 3]
 
 
 def test_build_context_and_sources():

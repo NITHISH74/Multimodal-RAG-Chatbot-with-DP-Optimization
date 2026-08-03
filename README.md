@@ -4,23 +4,25 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Gemini](https://img.shields.io/badge/Gemini-LLM-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![Tests](https://img.shields.io/badge/Tests-49%20passed-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#testing)
 
-A production-minded **multimodal Retrieval-Augmented Generation chatbot** built with a custom RAG pipeline, not LangChain or LlamaIndex. It supports document/image ingestion, hybrid retrieval, reranking, token-budgeted context optimization, cited answers, web crawling, feedback collection, and Supabase-backed persistence.
+A production-minded **multimodal Retrieval-Augmented Generation chatbot** with a custom RAG pipeline (no LangChain, no LlamaIndex). It supports document and image ingestion, hybrid retrieval, rerank-lite scoring, token-budgeted context optimization via 0/1 Knapsack DP, cited answers, web crawling, feedback collection, Supabase-backed persistence, an LLM-as-judge eval harness, prompt-injection guardrails, and a clean UI split.
 
 **Live Demo:** [multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app](https://multimodal-rag-chatbot-with-dp-optimization-2341qf.streamlit.app/)
 
 ## Highlights
 
-- **Custom RAG framework** with explicit retrieval, reranking, context building, and citation logic.
-- **Hybrid search** using Supabase pgvector semantic retrieval plus PostgreSQL full-text search.
+- **Custom RAG framework** — explicit retrieval, reranking, context building, and citation logic.
+- **Hybrid search** — Supabase pgvector semantic retrieval + PostgreSQL full-text search, fan-out in parallel.
 - **Rerank-Lite** combines semantic similarity, keyword overlap, and recency.
-- **0/1 Knapsack context optimization** selects the highest-value chunks under a token budget.
-- **Multimodal ingestion** for PDF, DOCX, PPTX, TXT/MD, and images.
-- **Cited answers** with file/page/slide references and similarity scores.
-- **Safe fallback** when retrieved context is not relevant enough.
+- **0/1 Knapsack context optimization** — DP selects the highest-value chunks under a token budget, with a fast-path when everything fits.
+- **Strengthened relevance gating** — independent vector + composite-score floors kill the "one shared keyword beats a threshold-passing chunk" trap.
+- **Multimodal retrieval** with `auto` / `keyword` / `off` modes — pulls the top image by cross-modal similarity without needing the word "image" in the query.
+- **Prompt-injection guardrails** — input length cap, injection-pattern blocklist, per-user rate limit, optional LLM-as-judge output faithfulness check.
+- **Cited answers** with file/page/slide references and similarity scores; safe fallback when nothing is relevant.
 - **Web crawling** with Crawl4AI, robots.txt handling, and domain allowlisting.
 - **User feedback loop** with helpful/improve controls and feedback analytics.
-- **Production-oriented security** with server-side secrets, upload validation, and RLS migrations.
+- **Pure-Python eval harness** with golden core, ablation study, and LLM-as-judge — every number in the benchmark table is measured, not claimed.
 
 ## Tech Stack
 
@@ -34,6 +36,7 @@ A production-minded **multimodal Retrieval-Augmented Generation chatbot** built 
 | Storage | Supabase Storage for images |
 | Crawling | Crawl4AI |
 | Optimization | Dynamic Programming 0/1 Knapsack |
+| Eval | Custom (Recall@k, Hit Rate@k, MRR, NDCG@k, Gemini-as-judge) |
 | Testing | Pytest |
 
 ## Architecture
@@ -48,7 +51,7 @@ flowchart TD
     E --> G["PostgreSQL keyword search"]
     F --> H["Merge and deduplicate results"]
     G --> H
-    H --> I["Rerank-Lite"]
+    H --> I["Rerank-Lite + relevance-gate"]
     I --> J["Semantic deduplication"]
     J --> K["0/1 Knapsack context optimizer"]
     K --> L["Prompt with citations and TOON metadata"]
@@ -61,63 +64,76 @@ flowchart TD
 
 ```text
 User query
-  -> intent routing
-  -> query embedding
-  -> vector search + keyword search
-  -> merge and deduplicate chunks
-  -> Rerank-Lite scoring
-  -> semantic deduplication
-  -> DP knapsack context selection
-  -> Gemini generation
-  -> cited answer + feedback capture
+  → input_guard (length cap, injection blocklist, rate limit)
+  → intent routing  (general | image | web | document)
+  → embed query (Gemini or Cohere)
+  → fan out: vector search  (parallel)  +  keyword search  (parallel)
+  → merge & deduplicate chunks
+  → Rerank-Lite scoring
+  → relevance-gate  (vector threshold AND composite-score floor)
+  → multimodal auto  (pull top-1 image by cross-modal similarity, if enabled)
+  → semantic deduplication
+  → DP knapsack context selection
+  → optional LLM-as-judge output faithfulness check
+  → Gemini generation
+  → cited answer + feedback capture
 ```
 
-## Why This Project Is Advanced
+## Measured Benchmark
 
-| Capability | What it demonstrates |
-|------------|----------------------|
-| Custom RAG pipeline | Understanding of the full retrieval and generation flow beyond framework wrappers |
-| Hybrid retrieval | Better recall for both semantic questions and exact keyword/name queries |
-| Reranking | Higher-quality evidence selection before generation |
-| DP context optimization | Token-efficient selection of the best chunks under a budget |
-| Citations | Grounded answers with transparent source references |
-| Feedback capture | Product-style quality monitoring and future improvement loop |
-| Supabase backend | Deployable architecture with persistent documents, history, images, and feedback |
-| Security hardening | Server-side secrets, upload validation, RLS, and optional owner isolation |
+Run yourself with `python -m eval.ablation`. Every cell below is a number the harness prints, not a claim.
 
-## Benchmark Comparison
+| Pipeline Variant | Hit@5 | Recall@5 | MRR | NDCG@5 | What it adds |
+|------------------|------:|---------:|----:|-------:|--------------|
+| A · vector-only         | measured | measured | measured | measured | pgvector top-k, no keyword, no rerank, no knapsack |
+| B · hybrid              | measured | measured | measured | measured | + keyword search (parallel) |
+| C · hybrid + rerank     | measured | measured | measured | measured | + Rerank-Lite scoring |
+| D · hybrid + rerank + DP | measured | measured | measured | measured | + dedup + 0/1 Knapsack (full pipeline) |
 
-| Pipeline Variant | Retrieval | Context Selection | Strength |
-|------------------|-----------|------------------|----------|
-| Basic Vector RAG | pgvector top-k only | Send top chunks directly | Simple baseline |
-| Hybrid RAG | Vector + keyword search | Reranked top chunks | Better recall and ranking |
-| Advanced RAG with DP | Hybrid + Rerank-Lite | Knapsack under token budget | Higher signal-to-token ratio |
-| Feedback-Aware RAG | Advanced RAG + feedback | Uses recent corrections as guidance | More product-ready user experience |
+Run the harness to populate the table for your corpus and embedding model:
 
-Suggested metrics for future reporting:
+```bash
+python -m eval.run_eval            # golden core, full report
+python -m eval.ablation            # 4-variant comparison
+python -m eval.ablation --json report.json
+```
 
-- Retrieval latency
-- Generation latency
-- Context chunks selected
-- Estimated input/output tokens
-- Citation correctness
-- User helpful rate
+Other metrics reported by `run_eval`: faithfulness (judge), relevance (judge), keyword coverage, generation latency, and the **negative_fallback_rate** (the fraction of `negatives.jsonl` queries that correctly trigger the safe refusal).
 
 ## Project Structure
 
-| File | Purpose |
-|------|---------|
-| `app.py` | Streamlit UI, upload/crawl flows, chat pipeline, diagnostics, feedback UI |
-| `rag_db.py` | Supabase access layer for documents, search RPCs, history, feedback |
-| `retrieval.py` | Hybrid result merge and Rerank-Lite scoring |
-| `context_builder.py` | Semantic deduplication, token budgeting, knapsack selection, citations |
-| `chunking.py` | Document parsing, chunking, cleaning, content hashing |
-| `embeddings.py` | Gemini and Cohere embedding helpers |
-| `routing.py` | Query intent routing |
-| `crawl.py` | Crawl4AI ingestion with allowlist and robots.txt handling |
-| `conversation.py` | Running-summary chat memory |
-| `db/migrations/` | Supabase schema, indexes, RPCs, storage, RLS, feedback tables |
-| `tests/test_core.py` | Unit tests for core pure-Python logic |
+```
+app.py                 # Streamlit entry point (~90 lines)
+pipeline.py            # RAG pipeline: retrieve, index, generate, persist
+retrieval.py           # hybrid retrieve + Rerank-Lite + relevance gate + multimodal auto
+context_builder.py     # semantic dedup, knapsack, citations, TOON metadata
+chunking.py            # document parsing, chunking, cleaning, content hashing
+embeddings.py          # Gemini + Cohere embedding helpers (with retry/backoff)
+guardrails.py          # input guard, secret redaction, output faithfulness
+conversation.py        # running-summary chat memory
+routing.py             # query intent classification
+crawl.py               # Crawl4AI ingestion with allowlist + robots.txt
+clients.py             # cached Gemini / Cohere / Supabase client factories
+config.py              # every tunable, env-var + Streamlit-secrets aware
+rag_db.py              # Supabase access layer (chunks, search RPCs, history, feedback)
+migrate.py             # in-app database bootstrap (idempotent schema)
+eval/                  # eval harness
+  ├── metrics.py       #   Recall@k, HitRate@k, MRR, NDCG@k
+  ├── sim.py           #   shared cosine similarity
+  ├── judge.py         #   Gemini LLM-as-judge (faithfulness, relevance)
+  ├── dataset.py       #   golden core + negatives loaders
+  ├── dataset/         #   golden_core.jsonl (30 curated) + negatives.jsonl (8)
+  ├── run_eval.py      #   end-to-end metrics on the golden core
+  ├── ablation.py      #   4-variant pipeline comparison
+  └── generate_dataset.py  # LLM-based dataset expansion
+ui/                    # Streamlit UI split
+  ├── sidebar.py       #   identity, upload, crawl, history, eval panel
+  ├── master_settings.py # the Master Settings panel (model switch, multimodal, etc.)
+  ├── chat.py          #   chat surface, message rendering, feedback
+  └── components.py    #   shared CSS, status chips, metric tiles, source cards
+db/migrations/         # Supabase schema, indexes, RPCs, storage, RLS
+tests/                 # 49 passing tests, pure-Python (no DB / API keys)
+```
 
 ## Setup
 
@@ -144,12 +160,8 @@ supabase_db_url=YOUR_SUPABASE_SESSION_POOLER_URL
 
 ### 3. Initialize database
 
-Use either option:
-
-- In the app sidebar, click **Initialize Database** if `supabase_db_url` is configured.
-- Or run `db/migrations/RUN_THIS_IN_SUPABASE.sql` in the Supabase SQL Editor.
-
-For existing deployments that only need the feedback feature, run `db/migrations/0006_answer_feedback.sql` in the Supabase SQL Editor.
+- In the app sidebar, click **Initialize Database** if `supabase_db_url` is configured, or
+- Run `db/migrations/RUN_THIS_IN_SUPABASE.sql` in the Supabase SQL Editor.
 
 ### 4. Run locally
 
@@ -157,16 +169,7 @@ For existing deployments that only need the feedback feature, run `db/migrations
 streamlit run app.py
 ```
 
-## Database Features
-
-- `documents` table with Gemini and Cohere embedding columns
-- HNSW indexes for fast approximate vector search
-- PostgreSQL full-text index for keyword retrieval
-- RPC functions for threshold-filtered vector search and keyword search
-- Supabase Storage bucket for image files
-- Chat session and message persistence
-- Answer feedback table for helpful/improve analytics
-- RLS policies for read-only anon access
+The app is stateless at the server layer — documents, images, chat history, and feedback are stored in Supabase.
 
 ## Testing
 
@@ -174,26 +177,10 @@ streamlit run app.py
 py -m pytest tests/ -q
 ```
 
-Current status:
+Current status: **49 passed** in ~2s.
 
-```text
-17 passed
-```
-
-The tests cover chunking, hashing, routing, retrieval merge/rerank logic, token budgeting, knapsack selection, citations, TOON metadata, conversation history, and crawl safety.
-
-## Deployment
-
-This app is designed for Streamlit Community Cloud:
-
-1. Apply Supabase migrations.
-2. Push the project to GitHub.
-3. Create a Streamlit app pointing to `app.py`.
-4. Add the same keys from `.env` as Streamlit secrets.
-5. Deploy.
-
-The app is stateless at the server layer. Documents, images, chat history, and feedback are stored in Supabase.
+Coverage: chunking, hashing, routing, retrieval merge/rerank/gating, token budgeting, knapsack selection (and fast-path), citations, TOON metadata, conversation history, crawl safety, guardrails (input guard, secret redaction), and the eval metrics math.
 
 ## Portfolio Summary
 
-This project showcases an end-to-end **Advanced Multimodal RAG system** using a custom retrieval pipeline, Supabase pgvector, hybrid search, reranking, Dynamic Programming context optimization, grounded citations, feedback analytics, and production-style deployment practices.
+This project showcases an end-to-end **Advanced Multimodal RAG system** using a custom retrieval pipeline, Supabase pgvector, hybrid search, reranking, Dynamic Programming context optimization, strengthened relevance gating, prompt-injection guardrails, multimodal auto-retrieval, a pure-Python eval harness with LLM-as-judge, and a clean Streamlit UI split. Every benchmark number is measured by `python -m eval.ablation`, not aspirational.

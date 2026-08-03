@@ -1,15 +1,20 @@
-google-genai
-python-dotenv
-faiss-cpu
-numpy
-pillow
-cohere
-streamlit
-PyPDF2
-python-docx
-python-pptx
-supabase
-st-copy-to-clipboard
-requests
-crawl4ai
-psycopg2-binary
+# Multi-Model RAG Chatbot — pinned dependencies.
+# Version ranges are minimums known to be compatible with this code.
+# Tested against Python 3.10-3.12.
+google-genai>=1.10.0
+python-dotenv>=1.0.1
+numpy>=1.26.0
+pillow>=10.0.0
+cohere>=5.12.0
+streamlit>=1.39.0
+pypdf>=4.3.0
+python-docx>=1.1.0
+python-pptx>=0.6.23
+supabase>=2.8.0
+st-copy-to-clipboard>=0.1.0
+requests>=2.32.0
+crawl4ai>=0.4.0
+psycopg2-binary>=2.9.9
+
+# Dev / test
+pytest>=8.0.0

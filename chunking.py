@@ -22,7 +22,7 @@ import io
 import re
 import hashlib
 
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 from docx import Document as DocxDocument
 from pptx import Presentation
 
@@ -30,6 +30,12 @@ import config
 
 _SENTENCE_RE = re.compile(r"(?<=[.!?。！？])\s+")
 _WORD_RE = re.compile(r"[A-Za-z0-9À-￿]")
+_BOILERPLATE_RE = re.compile(
+    r"^\s*(accept cookies|accept all|cookie policy|privacy policy|"
+    r"terms of service|subscribe to newsletter|sign up|log in|"
+    r"follow us|all rights reserved|copyright ©?\s*\d{0,4}.{0,80})\s*$",
+    re.IGNORECASE,
+)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -46,11 +52,12 @@ def normalize_text(text):
 
 
 def is_meaningful(text, min_chars=None):
-    """Reject empty, too-short, or gibberish chunks (Phase 2.4).
+    """Reject empty, too-short, or gibberish chunks.
 
     A chunk is meaningful when, after stripping, it has at least
     ``min_chars`` characters AND a reasonable fraction of them are
     word-characters (filters out lines of punctuation / control noise).
+    Also enforces a minimum information-density ratio.
     """
     if min_chars is None:
         min_chars = config.MIN_CHUNK_CHARS
@@ -59,7 +66,12 @@ def is_meaningful(text, min_chars=None):
     stripped = text.strip()
     if len(stripped) < min_chars:
         return False
+    if _BOILERPLATE_RE.match(stripped):
+        return False
     word_chars = len(_WORD_RE.findall(stripped))
+    density = word_chars / max(len(stripped), 1)
+    if density < config.MIN_INFORMATION_DENSITY:
+        return False
     # At least 40% of the content should be actual word characters.
     return word_chars >= max(min_chars * 0.4, 0.4 * len(stripped) * 0.5)
 

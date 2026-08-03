@@ -1,0 +1,30 @@
+{"id": "hvcp-01", "category": "technical", "query": "What is the Hyper-Vortex Cooling Protocol?", "expected_files": ["demo.txt"], "expected_keywords": ["HVCP", "thermal management"], "k": 5}
+{"id": "hvcp-02", "category": "technical", "query": "What liquid does HVCP use and at what temperature does it phase change?", "expected_files": ["demo.txt"], "expected_keywords": ["fluorocarbon", "42"], "k": 5}
+{"id": "hvcp-03", "category": "technical", "query": "How does the cooling system detect hotspots and how fast is the response?", "expected_files": ["demo.txt"], "expected_keywords": ["MQTT-SN", "15 milliseconds"], "k": 5}
+{"id": "hvcp-04", "category": "technical", "query": "What is a known failure point in the Gen-4 HVCP units?", "expected_files": ["demo.txt"], "expected_keywords": ["gasket seal", "humidity"], "k": 5}
+{"id": "hvcp-05", "category": "technical", "query": "Which protocol does the sensor mesh in HVCP use to communicate?", "expected_files": ["demo.txt"], "expected_keywords": ["MQTT-SN"], "k": 5}
+{"id": "bridge-01", "category": "general", "query": "What color is the Golden Gate Bridge and who picked that color?", "expected_files": ["demo.txt"], "expected_keywords": ["International Orange", "Irving Morrow"], "k": 5}
+{"id": "bridge-02", "category": "general", "query": "When was the Golden Gate Bridge built and how long was it the longest span?", "expected_files": ["demo.txt"], "expected_keywords": ["1933", "1964"], "k": 5}
+{"id": "bridge-03", "category": "general", "query": "Why was International Orange chosen for the bridge?", "expected_files": ["demo.txt"], "expected_keywords": ["fog", "visibility"], "k": 5}
+{"id": "bridge-04", "category": "general", "query": "Which bridge eventually surpassed the Golden Gate Bridge's record?", "expected_files": ["demo.txt"], "expected_keywords": ["Verrazzano-Narrows"], "k": 5}
+{"id": "solaris-01", "category": "narrative", "query": "What happened on day 4 of Project Solaris?", "expected_files": ["demo.txt"], "expected_keywords": ["base camp", "04:00"], "k": 5}
+{"id": "solaris-02", "category": "narrative", "query": "Why did Jenkins argue about the anchors on the trip?", "expected_files": ["demo.txt"], "expected_keywords": ["Jenkins", "Model-B", "titanium"], "k": 5}
+{"id": "solaris-03", "category": "narrative", "query": "What did Sarah note about atmospheric conditions during the trip?", "expected_files": ["demo.txt"], "expected_keywords": ["Sarah", "atmospheric pressure"], "k": 5}
+{"id": "solaris-04", "category": "narrative", "query": "How many solar arrays were deployed and did the data uplink stay stable?", "expected_files": ["demo.txt"], "expected_keywords": ["three solar arrays", "data uplink"], "k": 5}
+{"id": "profile-01", "category": "profile", "query": "Tell me about this student's interests and skills.", "expected_files": ["demo.txt"], "expected_keywords": ["artificial intelligence", "machine learning"], "k": 5}
+{"id": "profile-02", "category": "profile", "query": "What is the student studying and what grade?", "expected_files": ["demo.txt"], "expected_keywords": ["12th"], "k": 5}
+{"id": "profile-03", "category": "profile", "query": "What kind of problems does the student enjoy solving?", "expected_files": ["demo.txt"], "expected_keywords": ["problem solving"], "k": 5}
+{"id": "project-01", "category": "project", "query": "How does the RAG chatbot's retrieval pipeline work?", "expected_files": ["demo.txt"], "expected_keywords": ["hybrid", "pgvector", "full-text"], "k": 5}
+{"id": "project-02", "category": "project", "query": "What optimization does the chatbot use to pick chunks under a token budget?", "expected_files": ["demo.txt"], "expected_keywords": ["Knapsack", "token budget"], "k": 5}
+{"id": "project-03", "category": "project", "query": "Which signals does Rerank-Lite combine when scoring chunks?", "expected_files": ["demo.txt"], "expected_keywords": ["semantic similarity", "keyword overlap", "recency"], "k": 5}
+{"id": "project-04", "category": "project", "query": "What file types does the multimodal ingestion support?", "expected_files": ["demo.txt"], "expected_keywords": ["PDF", "DOCX", "PPTX", "images"], "k": 5}
+{"id": "project-05", "category": "project", "query": "What metrics does the eval harness measure?", "expected_files": ["demo.txt"], "expected_keywords": ["Recall", "NDCG", "faithfulness"], "k": 5}
+{"id": "project-06", "category": "project", "query": "How does the chatbot behave when no chunk clears the relevance threshold?", "expected_files": ["demo.txt"], "expected_keywords": ["safe", "fallback"], "k": 5}
+{"id": "project-07", "category": "project", "query": "Which embedding providers does the chatbot use and which generation model?", "expected_files": ["demo.txt"], "expected_keywords": ["Gemini", "Cohere"], "k": 5}
+{"id": "image-01", "category": "multimodal", "query": "show me the framework diagram", "expected_files": ["demo.txt", "framework.jpg"], "expected_keywords": [], "k": 5}
+{"id": "image-02", "category": "multimodal", "query": "what does the architecture look like?", "expected_files": ["demo.txt", "framework.jpg"], "expected_keywords": [], "k": 5}
+{"id": "pptx-01", "category": "pptx", "query": "What does the GenAI presentation cover?", "expected_files": ["ppt for gen ai.pptx"], "expected_keywords": [], "k": 5}
+{"id": "rag-01", "category": "rag", "query": "Explain how the knapsack optimizer chooses chunks", "expected_files": ["demo.txt"], "expected_keywords": ["Knapsack", "budget"], "k": 5}
+{"id": "rag-02", "category": "rag", "query": "How does hybrid search combine vector and keyword retrieval?", "expected_files": ["demo.txt"], "expected_keywords": ["pgvector", "full-text"], "k": 5}
+{"id": "rag-03", "category": "rag", "query": "What is the fallback policy when retrieval returns nothing relevant?", "expected_files": ["demo.txt"], "expected_keywords": ["fallback"], "k": 5}
+{"id": "rag-04", "category": "rag", "query": "How is the safe refusal message generated?", "expected_files": ["demo.txt"], "expected_keywords": ["threshold"], "k": 5}
